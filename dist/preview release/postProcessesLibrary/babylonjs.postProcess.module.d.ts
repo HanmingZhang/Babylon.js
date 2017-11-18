@@ -87,7 +87,7 @@ declare module BABYLON {
          */
         private _asciiArtFontTexture;
         /**
-         * This defines the amount you want to mix the "tile" or caracter space colored in the ascii art.
+         * This defines the amount you want to mix the "tile" or character space colored in the ascii art.
          * This number is defined between 0 and 1;
          */
         mixToTile: number;
@@ -202,5 +202,48 @@ declare module BABYLON {
          * @param options can either be the font name or an option object following the IDigitalRainPostProcessOptions format
          */
         constructor(name: string, camera: Camera, options?: string | IDigitalRainPostProcessOptions);
+    }
+}
+
+
+declare module BABYLON {
+    class EdgeDetectionPostProcess extends PostProcess {
+        private _edgeThickness;
+        private _minEdgeThickness;
+        private _maxEdgeThickness;
+        constructor(name: string, camera: Camera, edgeThickness: number, sceneSampler: PostProcess);
+    }
+}
+
+
+declare module BABYLON {
+    class PosterizationPostProcess extends PostProcess {
+        private _gamma;
+        private _numColors;
+        constructor(name: string, camera: Camera, gamma: number, numColors: number);
+    }
+}
+
+
+declare module BABYLON {
+    class paperPostProcess extends PostProcess {
+        private _othertexture;
+        constructor(name: string, imgUrl: string, options: number | PostProcessOptions, camera: Camera, samplingMode?: number, engine?: Engine, reusable?: boolean);
+    }
+}
+
+
+declare module BABYLON {
+    class kuwaharaPostProcess extends PostProcess {
+        private _radius;
+        constructor(name: string, imgUrl: string, options: number | PostProcessOptions, camera: Camera, samplingMode?: number, engine?: Engine, reusable?: boolean);
+    }
+}
+
+
+declare module BABYLON {
+    class framePostProcess extends PostProcess {
+        private _othertexture;
+        constructor(name: string, imgUrl: string, options: number | PostProcessOptions, camera: Camera, samplingMode?: number, engine?: Engine, reusable?: boolean);
     }
 }

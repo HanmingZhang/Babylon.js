@@ -1340,6 +1340,24 @@
                     "../../postProcessLibrary/src/digitalRain/digitalrain.fragment.fx"
                 ],
                 "output": "babylon.digitalRainPostProcess.js"
+            },
+            {
+                "files": [
+                    "../../postProcessLibrary/src/toon/babylon.edgeDetectionPostProcess.ts",
+                    "../../postProcessLibrary/src/toon/babylon.posterizationPostProcess.ts",
+                    "../../postProcessLibrary/src/toon/babylon.paperPostProcess.ts",
+                    "../../postProcessLibrary/src/toon/babylon.kuwaharaPostProcess.ts",
+                    "../../postProcessLibrary/src/toon/babylon.framePostProcess.ts"                
+                ],
+                "shaderFiles": [
+                    "../../postProcessLibrary/src/toon/sobeledgedetection.fragment.fx",
+                    "../../postProcessLibrary/src/toon/posterization.fragment.fx",                    
+                    "../../postProcessLibrary/src/toon/compose.fragment.fx",
+                    "../../postProcessLibrary/src/toon/paper.fragment.fx",
+                    "../../postProcessLibrary/src/toon/kuwahara.fragment.fx",
+                    "../../postProcessLibrary/src/toon/frame.fragment.fx"                    
+                ],
+                "output": "babylon.toonPostProcess.js"
             }
         ],
         "build": {

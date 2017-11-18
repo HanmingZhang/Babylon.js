@@ -201,7 +201,7 @@ module BABYLON {
         private _asciiArtFontTexture: AsciiArtFontTexture;
 
         /**
-         * This defines the amount you want to mix the "tile" or caracter space colored in the ascii art.
+         * This defines the amount you want to mix the "tile" or character space colored in the ascii art.
          * This number is defined between 0 and 1;
          */
         public mixToTile:number = 0;
