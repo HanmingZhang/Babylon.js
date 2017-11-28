@@ -125,6 +125,7 @@
 				divFps.innerHTML = engine.getFps().toFixed() + " fps";
 			});
 
+
 			// Resize
 			window.addEventListener("resize", function () {
 				engine.resize();
@@ -133,6 +134,8 @@
 			//var aaPostProcess = new BABYLON.AsciiArtPostProcess("AsciiArt", camera);
 			//var drPostProcess = new BABYLON.DigitalRainPostProcess("AsciiArt", camera);
 			
+			
+			// --------------------- Toon style post-processing part ---------------------------
 			var copyPostProcess = new BABYLON.PassPostProcess("Scene copy", 1.0, camera);
 
 			//var ptPostProcess = new BABYLON.PosterizationPostProcess("Posterization", camera, 0.8, 8.0);
@@ -152,7 +155,7 @@
 			composePostProcess.onApply = function (effect) {
 			 	effect.setTextureFromPostProcess("sceneSampler", copy2PostProcess);
 			};
-
+			// ------------------------------------------------------------------------------
 
 
 

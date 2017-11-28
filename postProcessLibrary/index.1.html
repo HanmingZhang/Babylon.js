@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+	<title>Shaders Library</title>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.2/dat.gui.min.js"></script>
+	<script src="../tools/DevLoader/BabylonLoader.js"></script>
+
+	<style>
+		html,
+		body {
+			width: 100%;
+			height: 100%;
+			padding: 0;
+			margin: 0;
+			overflow: hidden;
+		}
+		
+		#renderCanvas {
+			width: 100%;
+			height: 100%;
+		}
+		
+		#fps {
+			position: absolute;
+			background-color: black;
+			border: 2px solid red;
+			text-align: center;
+			font-size: 16px;
+			color: white;
+			top: 15px;
+			left: 10px;
+			width: 60px;
+			height: 20px;
+		}
+	</style>
+</head>
+
+<body>
+	<div id="fps">0</div>
+	<canvas id="renderCanvas"></canvas>
+
+	<script>
+	BABYLONDEVTOOLS.Loader.load(function() {
+		if (BABYLON.Engine.isSupported()) {
+			var canvas = document.getElementById("renderCanvas");
+			var engine = new BABYLON.Engine(canvas, true);					
+			BABYLONDEVTOOLS.Loader.debugShortcut(engine);	
+			var divFps = document.getElementById("fps");
+
+			var scene = new BABYLON.Scene(engine);
+
+
+			scene.clearColor = new BABYLON.Color4(0.02, 0.02, 0.02, 1.0);
+			scene.imageProcessingConfiguration.contrast = 1.6;
+			scene.imageProcessingConfiguration.exposure = 0.6;
+			scene.imageProcessingConfiguration.toneMappingEnabled = true;
+
+			var hdrTexture = new BABYLON.CubeTexture.CreateFromPrefilteredData("../assets/environment.dds", scene);
+			hdrTexture.gammaSpace = false;
+
+    		BABYLON.SceneLoader.Append("../assets/", "Alien.glb", scene, function () {
+	    		//scene.createDefaultCameraOrLight(true, true, true);
+	    		var sky = scene.createDefaultSkybox(hdrTexture, true, 100, 0.5);
+
+	   			var light = new BABYLON.DirectionalLight("dir01", new BABYLON.Vector3(-1, -2, -1), scene);
+	    		light.position = new BABYLON.Vector3(-2, 4, -1);
+	    		light.setDirectionToTarget(new BABYLON.Vector3(0, 1, 0));
+	    		light.intensity = 20;
+	    		light.shadowMinZ = 2.5;
+	    		light.shadowMaxZ = 6;
+	    		light.shadowEnabled = true;
+
+	    		var light2 = new BABYLON.DirectionalLight("dir02", new BABYLON.Vector3(-1, -2, -1), scene);
+	    		light2.position = new BABYLON.Vector3(2, 4, -1);
+	    		light2.setDirectionToTarget(new BABYLON.Vector3(0, 0.5, 0));
+	   		 	light2.intensity = 0;
+	    		light2.shadowMinZ = 2.5;
+	    		light2.shadowMaxZ = 6;
+
+	   			var generator = new BABYLON.ShadowGenerator(512, light);
+	    		generator.useBlurCloseExponentialShadowMap = true;
+	    		generator.useKernelBlur = true;
+	    		generator.blurScale = 1.0;
+	    		generator.blurKernel = 10.0;
+
+	    		for (var index = 0; index < scene.meshes.length; index++) {
+					var m = scene.meshes[index];
+	        		if (m === sky) {
+	            		continue;
+	        		}
+	       			m.receiveShadows = true;
+	        		generator.getShadowMap().renderList.push(m);
+	    		}
+
+	    		scene.materials[0].environmmentIntensity = 0.5;
+			});
+
+
+			//Adding a light
+			//var light = new BABYLON.PointLight("Omni", new BABYLON.Vector3(20, 20, 100), scene);
+			//var hemisphericLight = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), scene);
+
+			var camera = new BABYLON.ArcRotateCamera("Camera", Math.PI / 2, Math.PI / 6, 1.5, BABYLON.Vector3.Zero(), scene);
+			camera.attachControl(canvas, true);
+			camera.minZ = 0.1;
+			
+			
+			// Create meshes
+			//var sphere = BABYLON.Mesh.CreateSphere("sphere", 48, 20.0, scene);			
+			//sphere.position.x += 10;
+
+			//var cube = BABYLON.Mesh.CreateBox("box", 8, scene);
+			//cube.position.x -= 10;
+
+			//scene.registerBeforeRender(function () {
+			//	cube.rotation.x += 0.01 * scene.getAnimationRatio();
+			//	cube.rotation.y += 0.01 * scene.getAnimationRatio();
+			//});
+
+
+			// Register a render loop to repeatedly render the scene
+			engine.runRenderLoop(function () {
+				scene.render();
+				divFps.innerHTML = engine.getFps().toFixed() + " fps";
+			});
+
+			// Resize
+			window.addEventListener("resize", function () {
+				engine.resize();
+			});
+
+			//var aaPostProcess = new BABYLON.AsciiArtPostProcess("AsciiArt", camera);
+			//var drPostProcess = new BABYLON.DigitalRainPostProcess("AsciiArt", camera);
+			
+
+
+			
+			// --------------------- Pixelation post-processing part ---------------------------
+			var psPostProcess = new BABYLON.pixelationPostProcess("pencil sketch", [15.0, 15.0], 1.0, camera);
+			// ---------------------------------------------------------------------------------
+
+
+
+			//camera.detachPostProcess(aaPostProcess);
+			//camera.detachPostProcess(drPostProcess);
+
+			//var gui = new dat.GUI();
+			//var options = {
+			//	postProcess: "asciiArt"
+			//}
+
+			//  gui.add(options, 'postProcess', ['asciiArt', 'digitalRain']).onFinishChange(function () {
+				
+			// 	switch (options.postProcess) {
+			// 		case "asciiArt":
+			// 			camera.detachPostProcess(aaPostProcess);
+			// 			camera.detachPostProcess(drPostProcess);
+			// 			camera.attachPostProcess(aaPostProcess);
+			// 			break;
+			// 		case "digitalRain":
+			// 			camera.detachPostProcess(aaPostProcess);
+			// 			camera.detachPostProcess(drPostProcess);
+			// 			camera.attachPostProcess(drPostProcess);
+			// 			break;
+			// 	}
+			// });
+		}
+	});
+
+	</script>
+</body>
+
+</html>

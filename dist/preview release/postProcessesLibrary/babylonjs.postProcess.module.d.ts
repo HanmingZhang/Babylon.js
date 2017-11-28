@@ -247,3 +247,33 @@ declare module BABYLON {
         constructor(name: string, imgUrl: string, options: number | PostProcessOptions, camera: Camera, samplingMode?: number, engine?: Engine, reusable?: boolean);
     }
 }
+
+
+declare module BABYLON {
+    class rainPostProcess extends PostProcess {
+        degree: number;
+        private _lastTime;
+        private _lastDeltaTime;
+        constructor(name: string, options: number | PostProcessOptions, camera: Camera, samplingMode?: number, engine?: Engine, reusable?: boolean);
+    }
+}
+
+
+declare module BABYLON {
+    class frostPostProcess extends PostProcess {
+        degree: number;
+        othertexture: Nullable<Texture>;
+        private _lastTime;
+        private _lastDeltaTime;
+        constructor(name: string, imgUrl: string, options: number | PostProcessOptions, camera: Camera, samplingMode?: number, engine?: Engine, reusable?: boolean);
+    }
+}
+
+
+declare module BABYLON {
+    class pixelationPostProcess extends PostProcess {
+        private _pixel_w;
+        private _pixel_h;
+        constructor(name: string, pixel_size: number[], options: number | PostProcessOptions, camera: Camera, samplingMode?: number, engine?: Engine, reusable?: boolean);
+    }
+}

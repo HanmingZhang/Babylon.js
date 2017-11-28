@@ -105,7 +105,7 @@ module BABYLON {
         public needAlphaBlending(): boolean {
             return (this.alpha < 1.0);
         }
-
+ 
         public needAlphaTesting(): boolean {
             return false;
         }

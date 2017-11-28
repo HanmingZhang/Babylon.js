@@ -1176,6 +1176,16 @@
         "libraries": [
             {
                 "files": [
+                    "../../materialsLibrary/src/raindrops/babylon.raindropsMaterial.ts"
+                ],
+                "shaderFiles": [
+                    "../../materialsLibrary/src/raindrops/raindrops.vertex.fx",
+                    "../../materialsLibrary/src/raindrops/raindrops.fragment.fx"
+                ],
+                "output": "babylon.raindropsMaterial.js"
+            },
+            {
+                "files": [
                     "../../materialsLibrary/src/shadowOnly/babylon.shadowOnlyMaterial.ts"
                 ],
                 "shaderFiles": [
@@ -1358,6 +1368,33 @@
                     "../../postProcessLibrary/src/toon/frame.fragment.fx"                    
                 ],
                 "output": "babylon.toonPostProcess.js"
+            },
+            {
+                "files": [
+                    "../../postProcessLibrary/src/rain/babylon.rainPostProcess.ts"
+                ],
+                "shaderFiles": [
+                    "../../postProcessLibrary/src/rain/rain.fragment.fx"
+                ],
+                "output": "babylon.rainPostProcess.js"
+            },
+            {
+                "files": [
+                    "../../postProcessLibrary/src/frost/babylon.frostPostProcess.ts"
+                ],
+                "shaderFiles": [
+                    "../../postProcessLibrary/src/frost/frost.fragment.fx"
+                ],
+                "output": "babylon.frostPostProcess.js"
+            },
+            {
+                "files": [
+                    "../../postProcessLibrary/src/pixelation/babylon.pixelationPostProcess.ts"
+                ],
+                "shaderFiles": [
+                    "../../postProcessLibrary/src/pixelation/pixelation.fragment.fx"
+                ],
+                "output": "babylon.pixelationPostProcess.js"
             }
         ],
         "build": {

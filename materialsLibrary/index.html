@@ -41,6 +41,7 @@
     <script src="test/addlava.js"></script>
     <script src="test/addnormal.js"></script>
 	<script src="test/addwater.js"></script>
+	<script src="test/addraindrops.js"></script>
 	<script src="test/addfur.js"></script>
 	<script src="test/addterrain.js"></script>
 	<script src="test/addfire.js"></script>
@@ -117,7 +118,7 @@
 				rabbit.setEnabled(false);
 				rabbit.scaling = new BABYLON.Vector3(0.3, 0.3, 0.3);
 				scene.beginAnimation(skeletons[0], 0, 100, true, 0.8);
-
+				
 				// Shadow caster
 				var shadowCaster = BABYLON.Mesh.CreateTorus("torus", 4, 2, 30, scene, false);
 				shadowCaster.setEnabled(false);
@@ -193,6 +194,12 @@
 				water.addToRenderList(shadowCaster);
 				water.addToRenderList(shadowCaster2);
 				water.addToRenderList(shadowCaster3);
+
+				var raindrops = prepareRainDrops();
+				raindrops.addToRenderList(skybox);
+				raindrops.addToRenderList(shadowCaster);
+				raindrops.addToRenderList(shadowCaster2);
+				raindrops.addToRenderList(shadowCaster3);
 				
 				var fire = prepareFire();
 				
@@ -221,8 +228,9 @@
 				sphere.material = std;				
 				sphere.receiveShadows = true;
 
-				gui.add(options, 'material', ['standard', 'simple', 'water', 'fire', 'lava', 'normal', 'terrain', 'pbr', 'pbrmetallicroughness', 'pbrspecularglossiness', 'fur', 'triPlanar', 'gradient', 'sky', 'grid', 'shadowOnly', 'cell', 'background']).onFinishChange(function () {
+				gui.add(options, 'material', ['standard', 'simple', 'water', 'raindrops', 'fire', 'lava', 'normal', 'terrain', 'pbr', 'pbrmetallicroughness', 'pbrspecularglossiness', 'fur', 'triPlanar', 'gradient', 'sky', 'grid', 'shadowOnly', 'cell', 'background']).onFinishChange(function () {
 					water.enableRenderTargets(false);
+					raindrops.enableRenderTargets(false);
 					skybox.material = skyboxMaterial;
 					currentMesh.isVisible = true;
 					fur.resetFur();
@@ -240,6 +248,11 @@
 						case "water":
 							currentMaterial = water;
 							water.enableRenderTargets(true);
+							skybox.setEnabled(true);
+							break;
+						case "raindrops":
+							currentMaterial = raindrops;
+							raindrops.enableRenderTargets(true);
 							skybox.setEnabled(true);
 							break;
                         case "fire":
@@ -325,6 +338,8 @@
 					
 					water.mesh = currentMesh;
 					
+					raindrops.mesh = currentMesh;
+
 					if (currentMaterial === fur.material) {
                         // Furify the mesh
 						fur.resetFur();
