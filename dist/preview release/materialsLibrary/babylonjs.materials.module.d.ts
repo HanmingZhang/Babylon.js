@@ -5,10 +5,39 @@ declare module 'babylonjs-materials' {
 }
 
 declare module BABYLON {
+    class RaindropsMaterialDefines extends MaterialDefines {
+        DIFFUSE: boolean;
+        REFLECTION: boolean;
+        BUMP: boolean;
+        CLIPPLANE: boolean;
+        ALPHATEST: boolean;
+        DEPTHPREPASS: boolean;
+        ALPHAFROMDIFFUSE: boolean;
+        POINTSIZE: boolean;
+        FOG: boolean;
+        NORMAL: boolean;
+        UV1: boolean;
+        UV2: boolean;
+        VERTEXCOLOR: boolean;
+        VERTEXALPHA: boolean;
+        NUM_BONE_INFLUENCERS: number;
+        BonesPerMesh: number;
+        LOGARITHMICDEPTH: boolean;
+        constructor();
+    }
     class RaindropsMaterial extends PushMaterial {
         renderTargetSize: Vector2;
-        private _bumpTexture;
-        bumpTexture: BaseTexture;
+        private _diffuseTexture;
+        diffuseTexture: BaseTexture;
+        private _raindropTexture;
+        raindropTexture: BaseTexture;
+        private _raindropGroundHeightTexture;
+        raindropGroundHeightTexture: BaseTexture;
+        private _raindropGroundNormalTexture;
+        raindropGroundNormalTexture: BaseTexture;
+        private _raindropWaterNormalTexture;
+        raindropWaterNormalTexture: BaseTexture;
+        ambientColor: Color3;
         diffuseColor: Color3;
         specularColor: Color3;
         specularPower: number;
@@ -16,64 +45,11 @@ declare module BABYLON {
         disableLighting: boolean;
         private _maxSimultaneousLights;
         maxSimultaneousLights: number;
-        /**
-        * @param {number}: Represents the wind force
-        */
-        windForce: number;
-        /**
-        * @param {Vector2}: The direction of the wind in the plane (X, Z)
-        */
-        windDirection: Vector2;
-        /**
-        * @param {number}: Wave height, represents the height of the waves
-        */
-        waveHeight: number;
-        /**
-        * @param {number}: Bump height, represents the bump height related to the bump map
-        */
-        bumpHeight: number;
-        /**
-         * @param {boolean}: Add a smaller moving bump to less steady waves.
-         */
-        private _bumpSuperimpose;
-        bumpSuperimpose: boolean;
-        /**
-         * @param {boolean}: Color refraction and reflection differently with .RaindropsColor2 and .colorBlendFactor2. Non-linear (physically correct) fresnel.
-         */
-        private _fresnelSeparate;
-        fresnelSeparate: boolean;
-        /**
-         * @param {boolean}: bump Waves modify the reflection.
-         */
-        private _bumpAffectsReflection;
-        bumpAffectsReflection: boolean;
-        /**
-        * @param {number}: The Raindrops color blended with the refraction (near)
-        */
-        raindropsColor: Color3;
-        /**
-        * @param {number}: The blend factor related to the raindrops color
-        */
-        colorBlendFactor: number;
-        /**
-         * @param {number}: The raindrops color blended with the reflection (far)
-         */
-        raindropsColor2: Color3;
-        /**
-         * @param {number}: The blend factor related to the raindrops color (reflection, far)
-         */
-        colorBlendFactor2: number;
-        /**
-        * @param {number}: Represents the maximum length of a wave
-        */
-        waveLength: number;
-        /**
-        * @param {number}: Defines the waves speed
-        */
-        waveSpeed: number;
         protected _renderTargets: SmartArray<RenderTargetTexture>;
+        protected _globalAmbientColor: Color3;
+        raindropPuddleAmount: number;
+        raindropSpeed: number;
         private _mesh;
-        private _refractionRTT;
         private _reflectionRTT;
         private _reflectionTransform;
         private _lastTime;
@@ -84,8 +60,8 @@ declare module BABYLON {
         * Constructor
         */
         constructor(name: string, scene: Scene, renderTargetSize?: Vector2);
+        getClassName(): string;
         useLogarithmicDepth: boolean;
-        readonly refractionTexture: RenderTargetTexture;
         readonly reflectionTexture: RenderTargetTexture;
         addToRenderList(node: any): void;
         enableRenderTargets(enable: boolean): void;
@@ -94,6 +70,9 @@ declare module BABYLON {
         needAlphaBlending(): boolean;
         needAlphaTesting(): boolean;
         getAlphaTestTexture(): Nullable<BaseTexture>;
+        /**
+         * Child classes can use it to update shaders
+         */
         isReadyForSubMesh(mesh: AbstractMesh, subMesh: SubMesh, useInstances?: boolean): boolean;
         bindForSubMesh(world: Matrix, mesh: Mesh, subMesh: SubMesh): void;
         private _createRenderTargets(scene, renderTargetSize);
@@ -103,9 +82,53 @@ declare module BABYLON {
         dispose(forceDisposeEffect?: boolean): void;
         clone(name: string): RaindropsMaterial;
         serialize(): any;
-        getClassName(): string;
         static Parse(source: any, scene: Scene, rootUrl: string): RaindropsMaterial;
-        static CreateDefaultMesh(name: string, scene: Scene): Mesh;
+    }
+}
+
+
+declare module BABYLON {
+    class snowMaterial extends PushMaterial {
+        lastTime: number;
+        mixTexture: BaseTexture;
+        private _diffuseTextureX;
+        diffuseTextureX: BaseTexture;
+        private _diffuseTextureY;
+        diffuseTextureY: BaseTexture;
+        private _diffuseTextureZ;
+        diffuseTextureZ: BaseTexture;
+        private _normalTextureX;
+        normalTextureX: BaseTexture;
+        private _normalTextureY;
+        normalTextureY: BaseTexture;
+        private _normalTextureZ;
+        normalTextureZ: BaseTexture;
+        private _perlinNoiseTexture;
+        perlinNoiseTexture: BaseTexture;
+        tileSize: number;
+        noiseSize: number;
+        diffuseColor: Color3;
+        specularColor: Color3;
+        specularPower: number;
+        private _disableLighting;
+        disableLighting: boolean;
+        private _maxSimultaneousLights;
+        maxSimultaneousLights: number;
+        private _renderId;
+        constructor(name: string, scene: Scene);
+        needAlphaBlending(): boolean;
+        needAlphaTesting(): boolean;
+        getAlphaTestTexture(): Nullable<BaseTexture>;
+        isReadyForSubMesh(mesh: AbstractMesh, subMesh: SubMesh, useInstances?: boolean): boolean;
+        bindForSubMesh(world: Matrix, mesh: Mesh, subMesh: SubMesh): void;
+        getAnimatables(): IAnimatable[];
+        getActiveTextures(): BaseTexture[];
+        hasTexture(texture: BaseTexture): boolean;
+        dispose(forceDisposeEffect?: boolean): void;
+        clone(name: string): snowMaterial;
+        serialize(): any;
+        getClassName(): string;
+        static Parse(source: any, scene: Scene, rootUrl: string): snowMaterial;
     }
 }
 

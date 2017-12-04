@@ -1,81 +1,388 @@
 <!DOCTYPE html>
-<html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
 <head>
-    <meta name="viewport" content="width=device-width">
-    <title>Babylon.js - Heightmap demo</title>
-    <script src="//cdn.webglstats.com/stat.js" defer="defer" async="async"></script>
-    <script>
-        (function (i, s, o, g, r, a, m) {
-            i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
-                (i[r].q = i[r].q || []).push(arguments)
-            }, i[r].l = 1 * new Date(); a = s.createElement(o),
-            m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
-        })(window, document, 'script', '//www.google-analytics.com/analytics.js', 'ga');
+	<title>Shaders Library</title>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.2/dat.gui.min.js"></script>
+	<script src="../tools/DevLoader/BabylonLoader.js"></script>
 
-        ga('create', 'UA-41767310-1', 'babylonjs.com');
-        ga('send', 'pageview');
-
-    </script>
-    <link href="src/css/index.css" rel="stylesheet" />
-    <script src="https://code.jquery.com/pep/0.4.0/pep.min.js"></script>
-	<script src="//preview.babylonjs.com/babylon.js"></script>
-    <script src="src/babylon.waterMaterial.js"></script>
-    <script src="src/babylon.raindropsMaterial.js"></script>
-	<script src="src/heightMap.js"></script>
-    <script src="src/demo.js"></script>
+	<style>
+		html,
+		body {
+			width: 100%;
+			height: 100%;
+			padding: 0;
+			margin: 0;
+			overflow: hidden;
+		}
+		
+		#renderCanvas {
+			width: 100%;
+			height: 100%;
+		}
+		
+		#fps {
+			position: absolute;
+			background-color: black;
+			border: 2px solid red;
+			text-align: center;
+			font-size: 16px;
+			color: white;
+			top: 15px;
+			left: 10px;
+			width: 60px;
+			height: 20px;
+		}
+	</style>
 </head>
+
 <body>
-    <canvas id="renderCanvas" touch-action="none"></canvas>
-    <div id="fps"></div>
-    <div id="stats"></div>
-    <div id="status"></div>
-    <div id="controlPanel">
-        <div id="controlsZone">
-            <p>
-                <button id="enableDebug">Debug layer</button>
-            </p>
-            <p>
-                <button id="fullscreen">Fullscreen</button>
-            </p>
-        </div>
-        <div class="tag">Control panel</div>
-        <div class="tag" id="clickableTag"></div>
-    </div>
-    <div id="cameraPanel">
-        <div id="cameraControlsZone">
-            Active camera:<br>
-            <select id="camerasList"></select>
-            <p>
-                Change control method:
-                <button class="buttonControlPanel" id="touchCamera">
-                    <img src="../assets/CamTouchOff.png" class="buttonImg" />Touch camera
-                </button>
-                <button class="buttonControlPanel" id="deviceOrientationCamera">
-                    <img src="../assets/CamDeviceOff.png" class="buttonImg" />VR Device orientation camera
-                </button>
-                <button class="buttonControlPanel" id="gamepadCamera">
-                    <img src="../assets/CamGamepadJoy.png" class="buttonImg" />Gamepad camera
-                </button>
-                <button class="buttonControlPanel" id="virtualJoysticksCamera">
-                    <img src="../assets/CamVirtualJoy.png" class="buttonImg" />Virtual joysticks camera
-                </button>
-                <button class="buttonControlPanel" id="anaglyphCamera">
-                    <img src="../assets/CamAnaGly.png" class="buttonImg" />Anaglyph camera
-                </button>
-            </p>
-            <p>
-                Post-processes:
-                <button class="smallButtonControlPanel" id="toggleFxaa">Toggle FXAA (antialiasing)</button>
-                <button class="smallButtonControlPanel" id="toggleFsaa4">Toggle FSAA 4X (antialiasing)</button>
-                <button class="smallButtonControlPanel" id="toggleBandW">Toggle Black and white</button>
-                <button class="smallButtonControlPanel" id="toggleSepia">Toggle Sepia</button>
-            </p>
-        </div>
-        <div class="cameraTag"><img src="../assets/camera.png" /></div>
-        <div class="cameraTag" id="cameraClickableTag"></div>
-    </div>
-    <div id="notSupported" class="hidden">Sorry but your browser does not support WebGL...</div>
-	<script src="src/loaderCustoms.js">
+	<div id="fps">0</div>
+	<canvas id="renderCanvas"></canvas>
+
+	<script>
+	BABYLONDEVTOOLS.Loader.load(function() {
+		if (BABYLON.Engine.isSupported()) {
+			var canvas = document.getElementById("renderCanvas");
+			var engine = new BABYLON.Engine(canvas, true);					
+			BABYLONDEVTOOLS.Loader.debugShortcut(engine);	
+			var divFps = document.getElementById("fps");
+
+            var scene = new BABYLON.Scene(engine);
+	
+            // Camera
+            var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(5, 4, -47), scene);
+            camera.setTarget(BABYLON.Vector3.Zero());
+            camera.attachControl(canvas, true);
+            
+            // Ambient Light
+            var AmbientLight = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
+            AmbientLight.intensity = 0.2;
+
+            var sun = new BABYLON.PointLight("Omni0", new BABYLON.Vector3(80, 5, 20), scene);
+
+
+            // Ground
+            var ground = BABYLON.Mesh.CreateGroundFromHeightMap("ground", "../assets/heightMap.png", 100, 100, 100, 0, 10, scene, false);
+            var groundMaterial = new BABYLON.StandardMaterial("ground", scene);
+            groundMaterial.diffuseTexture = new BABYLON.Texture("../assets/ground.jpg", scene);
+            groundMaterial.diffuseTexture.uScale = 6;
+            groundMaterial.diffuseTexture.vScale = 6;
+            groundMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+            ground.position.y = -2.05;
+            ground.material = groundMaterial;
+            
+            // Sky material
+            var skyboxMaterial = new BABYLON.SkyMaterial("skyMaterial", scene);
+            skyboxMaterial.backFaceCulling = false;
+            //skyboxMaterial._cachedDefines.FOG = true;
+            skyboxMaterial.useSunPosition = true;
+            skyboxMaterial.sunPosition = sun.position;
+            sun.intensity = 1.0 - skyboxMaterial.luminance / 2.0;
+
+            // Sky mesh (box)
+            var skybox = BABYLON.Mesh.CreateBox("skyBox", 1000.0, scene);
+            skybox.material = skyboxMaterial;
+
+
+
+            // calculate key frame position value
+            var sunRadius = sun.position.length();
+            var midX;
+            var midZ;
+
+            if(sun.position.x == 0.0 && sun.position.z == 0.0){
+                midX = sunRadius;
+                midZ = 0;
+            }
+            else{
+                midX = sunRadius * sun.position.x / Math.sqrt(sun.position.x * sun.position.x + sun.position.z * sun.position.z);
+                midX = Math.abs(midX);
+
+                midZ = sunRadius * sun.position.z / Math.sqrt(sun.position.x * sun.position.x + sun.position.z * sun.position.z);
+                //midZ = Math.abs(midZ);
+            }
+
+            var frameRate = 100.0;
+            var totalFrameNumber = 2000.0;
+
+            // construct keys
+            var keysY = [
+                { frame: 0, value: sunRadius },
+                { frame: 0.5 * totalFrameNumber, value: -sunRadius },
+                { frame: totalFrameNumber, value: sunRadius }
+            ];
+
+            var keysX = [
+                { frame: 0, value: 0.0 },
+                { frame: 0.25 * totalFrameNumber, value: midX },
+                { frame: 0.5 * totalFrameNumber, value: 0.0 },
+                { frame: 0.75 * totalFrameNumber, value: -midX },
+                { frame: totalFrameNumber, value: 0.0 }
+            ];
+
+            var keysZ = [
+                { frame: 0, value: 0.0 },
+                { frame: 0.25 * totalFrameNumber, value: midZ },
+                { frame: 0.5 * totalFrameNumber, value: 0.0 },
+                { frame: 0.75 * totalFrameNumber, value: -midZ },
+                { frame: totalFrameNumber, value: 0.0 }
+            ];
+            
+            var skyBoxAnimationY = new BABYLON.Animation("skyAnimationY", "sunPosition.y", frameRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+            skyBoxAnimationY.setKeys(keysY);
+
+            var skyBoxAnimationX = new BABYLON.Animation("skyAnimationX", "sunPosition.x", frameRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+            skyBoxAnimationX.setKeys(keysX); 
+
+            var skyBoxAnimationZ = new BABYLON.Animation("skyAnimationZ", "sunPosition.z", frameRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+            skyBoxAnimationZ.setKeys(keysZ); 
+
+
+            var sunAnimationY = new BABYLON.Animation("sunAnimationY", "position.y", frameRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+            sunAnimationY.setKeys(keysY);
+
+            var sunAnimationX = new BABYLON.Animation("sunAnimationX", "position.x", frameRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+            sunAnimationX.setKeys(keysX); 
+
+            var sunAnimationZ = new BABYLON.Animation("sunAnimationZ", "position.z", frameRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+            sunAnimationZ.setKeys(keysZ); 
+
+            
+            skyboxMaterial.animations = [skyBoxAnimationY, skyBoxAnimationX, skyBoxAnimationZ];
+            sun.animations = [sunAnimationY, sunAnimationX, sunAnimationZ];
+
+            // create animation Cycle
+            var skyBoxAnimation = scene.beginAnimation(skyboxMaterial, 0, totalFrameNumber, true);
+            var sunAnimation    = scene.beginAnimation(sun, 0, totalFrameNumber, true);
+
+
+            // Day and night cycle animation control
+            var isPaused = false;
+
+            var pauseAnimation = function (sb, s) {
+                if(isPaused){
+                    sb.restart();
+                    s.restart();
+                }
+                else{
+                    sb.pause();
+                    s.pause();
+                }
+                isPaused = !isPaused;
+            };
+
+
+            var jumpToAnimation = function(sb, s, targetFrame) {
+                sb.goToFrame(targetFrame);
+                s.goToFrame(targetFrame);
+            }
+
+            window.addEventListener("keydown", function (evt) {
+                switch (evt.keyCode) {
+                    case 49: pauseAnimation(skyBoxAnimation, sunAnimation); break; // 1
+
+
+                    default: break;
+                }
+            });
+            
+            //pause animation and set to Time now
+            pauseAnimation(skyBoxAnimation, sunAnimation);
+            
+            var tmp = 1.0 - ((sun.position.y / sunRadius) + 1.0) / 2.0;
+            console.log(tmp);
+
+            var timeNow = sun.position.x >= 0.0 ? tmp / 2.0 : 1.0 - tmp / 2.0;
+            console.log(timeNow);
+
+            jumpToAnimation(skyBoxAnimation, sunAnimation, timeNow * totalFrameNumber);
+
+            
+
+
+
+            // GUI
+            var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+            advancedTexture.idealHeight = 1100;
+
+            var panel = new BABYLON.GUI.StackPanel();
+            panel.width = "300px";
+            panel.isVertical = true;
+            panel.paddingRight = "20px";
+            panel.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+            panel.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+            panel.fontSize = 16;
+            advancedTexture.addControl(panel);
+
+            var getPropertyPath = function(property) {
+                return skyboxMaterial[property];
+            }
+
+            var setPropertyPath = function(property, value) {
+                skyboxMaterial[property] = value;
+
+                // connect luminace with sun's intensity
+                if(property == "luminance"){
+                    sun.intensity = 1.0 - skyboxMaterial.luminance / 2.0;
+                }
+                return;
+            }    
+
+            var addSlider = function(text, property, min, max, left, panel, top) {
+                var topPanel = new BABYLON.GUI.StackPanel();        
+                topPanel.height = "30px";
+                topPanel.isVertical = false;
+                panel.addControl(topPanel);    
+
+                var header = new BABYLON.GUI.TextBlock();
+                header.text = text;
+                header.width = "150px";
+                header.color = "white";
+                header.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+                topPanel.addControl(header); 
+                if (left) {
+                    header.left = left;
+                }
+
+                var valueHeader = new BABYLON.GUI.TextBlock();
+                valueHeader.text = getPropertyPath(property).toFixed(2);
+                valueHeader.width = "100px";
+                valueHeader.color = "white";
+                valueHeader.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+                topPanel.addControl(valueHeader);            
+
+                var slider = new BABYLON.GUI.Slider();
+                slider.minimum = min;
+                slider.maximum = max;
+                slider.height = "20px";
+                slider.color = "green";
+                slider.background = "white";
+                slider.onSync = function() {
+                    slider.value = getPropertyPath(property);
+                }
+                slider.onSync();
+                slider.onValueChangedObservable.add(function(value) {
+                    valueHeader.text = value.toFixed(2);
+                    setPropertyPath(property, value);
+                });
+
+                if (left) {
+                    slider.paddingLeft = left;
+                }
+
+            panel.addControl(slider);  
+
+            return slider;
+            }
+
+            var addTimeSlider = function(text, min, max, left, panel, top) {
+                var topPanel = new BABYLON.GUI.StackPanel();        
+                topPanel.height = "30px";
+                topPanel.isVertical = false;
+                panel.addControl(topPanel);    
+
+                var header = new BABYLON.GUI.TextBlock();
+                header.text = text;
+                header.width = "150px";
+                header.color = "white";
+                header.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+                topPanel.addControl(header); 
+                if (left) {
+                    header.left = left;
+                }
+
+                // get current time;
+                var currentTime = skyBoxAnimation.getAnimations()[0].currentFrame / totalFrameNumber;
+
+
+                var valueHeader = new BABYLON.GUI.TextBlock();
+                valueHeader.text = (((currentTime * 24.0) + 12) % 24).toFixed(0);
+                valueHeader.width = "100px";
+                valueHeader.color = "white";
+                valueHeader.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+                topPanel.addControl(valueHeader);            
+
+                var slider = new BABYLON.GUI.Slider();
+                slider.minimum = min;
+                slider.maximum = max;
+                slider.height = "20px";
+                slider.color = "green";
+                slider.background = "white";
+                slider.onSync = function() {
+                    var tmp = skyBoxAnimation.getAnimations()[0].currentFrame / totalFrameNumber;
+                    slider.value = ((tmp * 24.0) + 12) % 24;
+                }
+                slider.onSync();
+                slider.onValueChangedObservable.add(function(value) {
+                    valueHeader.text = value.toFixed(0);
+                    jumpToAnimation(skyBoxAnimation, sunAnimation, (value + 12) % 24 / 24.0 * totalFrameNumber);
+                });
+
+                if (left) {
+                    slider.paddingLeft = left;
+                }
+
+            panel.addControl(slider);  
+
+            return slider;
+            }
+
+            var addButton = function(text, func, left, panel) {
+                var button = BABYLON.GUI.Button.CreateSimpleButton("button", text);
+                button.height = "30px";
+                button.width = "200px";
+                button.color = "white";
+                button.background = "green";
+                button.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+                button.onPointerDownObservable.add(function(){
+                    func();
+                })
+                panel.addControl(button); 
+
+                if (left) {
+                    button.left = left;
+                }
+            } 
+
+            var addSeparator = function(panel) {
+                var rectangle = new BABYLON.GUI.Rectangle();
+                rectangle.height = "15px";
+                rectangle.thickness = 0;
+                panel.addControl(rectangle); 
+            }
+
+
+            addSlider("Sky turbidity :", "turbidity", 0, 25, "20px", panel);   
+            addSeparator(panel);
+
+            addSlider("Sky luminance :", "luminance", 0, 1.0, "20px", panel);   
+            addSeparator(panel);
+
+            var timeSlider = addTimeSlider("Time :", 0, 24, "20px", panel);   
+            addSeparator(panel);
+            addSeparator(panel);
+            
+            addButton("Play / Pause", function() {
+                pauseAnimation(skyBoxAnimation, sunAnimation);
+            }, "20px", panel);
+            
+
+			// Register a render loop to repeatedly render the scene
+			engine.runRenderLoop(function () {
+				scene.render();
+				divFps.innerHTML = engine.getFps().toFixed() + " fps";
+			});
+
+			// Resize
+			window.addEventListener("resize", function () {
+				engine.resize();
+			});
+
+		}
+	});
+
 	</script>
 </body>
+
 </html>

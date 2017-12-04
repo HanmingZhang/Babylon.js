@@ -1186,6 +1186,16 @@
             },
             {
                 "files": [
+                    "../../materialsLibrary/src/snow/babylon.snowMaterial.ts"
+                ],
+                "shaderFiles": [
+                    "../../materialsLibrary/src/snow/snow.vertex.fx",
+                    "../../materialsLibrary/src/snow/snow.fragment.fx"
+                ],
+                "output": "babylon.snowMaterial.js"
+            },
+            {
+                "files": [
                     "../../materialsLibrary/src/shadowOnly/babylon.shadowOnlyMaterial.ts"
                 ],
                 "shaderFiles": [

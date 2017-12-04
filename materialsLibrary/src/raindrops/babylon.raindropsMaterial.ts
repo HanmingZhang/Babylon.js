@@ -1,511 +1,524 @@
 /// <reference path="../../../dist/preview release/babylon.d.ts"/>
 
 module BABYLON {
-    class RaindropsMaterialDefines extends MaterialDefines {
-        public BUMP = false;
-        public REFLECTION = false;
-        public CLIPPLANE = false;
-        public ALPHATEST = false;
-        public DEPTHPREPASS = false;
-        public POINTSIZE = false;
-        public FOG = false;
-        public NORMAL = false;
-        public UV1 = false;
-        public UV2 = false;
-        public VERTEXCOLOR = false;
-        public VERTEXALPHA = false;
-        public NUM_BONE_INFLUENCERS = 0;
-        public BonesPerMesh = 0;
-        public INSTANCES = false;
-        public SPECULARTERM = false;
-        public LOGARITHMICDEPTH = false;
-        public FRESNELSEPARATE = false;
-        public BUMPSUPERIMPOSE = false;
-        public BUMPAFFECTSREFLECTION = false;
+    export class RaindropsMaterialDefines extends MaterialDefines{
 
-        constructor() {
-            super();
-            this.rebuild();
-        }
-    }
-
-    export class RaindropsMaterial extends PushMaterial {
-		/*
+         public DIFFUSE = false;
+         public REFLECTION = false;
+         public BUMP = false;
+         public CLIPPLANE = false;
+         public ALPHATEST = false;
+         public DEPTHPREPASS = false;
+         public ALPHAFROMDIFFUSE = false;
+         public POINTSIZE = false;
+         public FOG = false;
+         public NORMAL = false;
+         public UV1 = false;
+         public UV2 = false;
+         public VERTEXCOLOR = false;
+         public VERTEXALPHA = false;
+         public NUM_BONE_INFLUENCERS = 0;
+         public BonesPerMesh = 0;
+         public LOGARITHMICDEPTH = false;
+         
+ 
+         constructor() {
+             super();
+             this.rebuild();
+         }
+     }
+ 
+     export class RaindropsMaterial extends PushMaterial {
+         /*
 		* Public members
 		*/
-        @serializeAsTexture("bumpTexture")
-        private _bumpTexture: BaseTexture;
-        @expandToProperty("_markAllSubMeshesAsTexturesDirty")
-        public bumpTexture: BaseTexture;
+         @serializeAsTexture("diffuseTexture")
+         private _diffuseTexture: BaseTexture;
+         @expandToProperty("_markAllSubMeshesAsTexturesDirty")
+         public diffuseTexture:BaseTexture;
+ 
+         @serializeAsTexture("raindropTexture")
+         private _raindropTexture: BaseTexture;
+         @expandToProperty("_markAllSubMeshesAsTexturesDirty")
+         public raindropTexture: BaseTexture;  
+         
+         @serializeAsTexture("raindropGoundHeightTexture")
+         private _raindropGroundHeightTexture: BaseTexture;
+         @expandToProperty("_markAllSubMeshesAsTexturesDirty")
+         public raindropGroundHeightTexture: BaseTexture;
+         
+         @serializeAsTexture("raindropGoundNormalTexture")
+         private _raindropGroundNormalTexture: BaseTexture;
+         @expandToProperty("_markAllSubMeshesAsTexturesDirty")
+         public raindropGroundNormalTexture: BaseTexture;
 
-        @serializeAsTexture("raindropTexture")
-        private _raindropTexture: BaseTexture;
-        @expandToProperty("_markAllSubMeshesAsTexturesDirty")
-        public raindropTexture: BaseTexture;
+         @serializeAsTexture("raindropWaterNormalTexture")
+         private _raindropWaterNormalTexture: BaseTexture;
+         @expandToProperty("_markAllSubMeshesAsTexturesDirty")
+         public raindropWaterNormalTexture: BaseTexture;
 
 
+         @serializeAsColor3("ambient")
+         public ambientColor = new Color3(0, 0, 0);
+ 
+         @serializeAsColor3("diffuse")
+         public diffuseColor = new Color3(1, 1, 1);
+ 
+         @serializeAsColor3("specular")
+         public specularColor = new Color3(1, 1, 1);
+ 
+         @serialize()
+         public specularPower = 64;
 
-        @serializeAsColor3()
-        public diffuseColor = new Color3(1, 1, 1);
+         @serialize("disableLighting")
+         private _disableLighting = false;
+         @expandToProperty("_markAllSubMeshesAsLightsDirty")
+         public disableLighting: boolean;
+ 
+         @serialize("maxSimultaneousLights")
+         private _maxSimultaneousLights = 4;
+         @expandToProperty("_markAllSubMeshesAsLightsDirty")
+         public maxSimultaneousLights: number;
+ 
+        //  @serialize("roughness")
+        //  private _roughness = 0;
+        //  @expandToProperty("_markAllSubMeshesAsTexturesDirty")
+        //  public roughness: number;            
+ 
+         protected _renderTargets = new SmartArray<RenderTargetTexture>(16);
 
-        @serializeAsColor3()
-        public specularColor = new Color3(0, 0, 0);
+         protected _globalAmbientColor = new Color3(0, 0, 0);
 
-        @serialize()
-        public specularPower = 64;
 
-        @serialize("disableLighting")
-        private _disableLighting = false;
-        @expandToProperty("_markAllSubMeshesAsLightsDirty")
-        public disableLighting: boolean;
+        /*
+		* Public raindrop property members
+		*/
+        public raindropPuddleAmount: number = 2.0;
+        public raindropSpeed: number = 25.0;
 
-        @serialize("maxSimultaneousLights")
-        private _maxSimultaneousLights = 4;
-        @expandToProperty("_markAllSubMeshesAsLightsDirty")
-        public maxSimultaneousLights: number;
-
-        /**
-        * @param {number}: Represents the wind force
-        */
-        @serialize()
-        public windForce: number = 6;
-        /**
-        * @param {Vector2}: The direction of the wind in the plane (X, Z)
-        */
-        @serializeAsVector2()
-        public windDirection: Vector2 = new Vector2(0, 1);
-        /**
-        * @param {number}: Wave height, represents the height of the waves
-        */
-        @serialize()
-        public waveHeight: number = 0.4;
-        /**
-        * @param {number}: Bump height, represents the bump height related to the bump map
-        */
-        @serialize()
-        public bumpHeight: number = 0.4;
-        /**
-         * @param {boolean}: Add a smaller moving bump to less steady waves.
-         */
-        @serialize("bumpSuperimpose")
-        private _bumpSuperimpose = false;
-        @expandToProperty("_markAllSubMeshesAsMiscDirty")
-        public bumpSuperimpose: boolean;
-
-        /**
-         * @param {boolean}: Color refraction and reflection differently with .RaindropsColor2 and .colorBlendFactor2. Non-linear (physically correct) fresnel.
-         */
-        @serialize("fresnelSeparate")
-        private _fresnelSeparate = false;
-        @expandToProperty("_markAllSubMeshesAsMiscDirty")
-        public fresnelSeparate: boolean;
-
-        /**
-         * @param {boolean}: bump Waves modify the reflection.
-         */
-        @serialize("bumpAffectsReflection")
-        private _bumpAffectsReflection = false;
-        @expandToProperty("_markAllSubMeshesAsMiscDirty")
-        public bumpAffectsReflection: boolean;
-
-        /**
-        * @param {number}: The Raindrops color blended with the refraction (near)
-        */
-        @serializeAsColor3()
-        public raindropsColor: Color3 = new Color3(0.1, 0.1, 0.6);
-        /**
-        * @param {number}: The blend factor related to the raindrops color
-        */
-        @serialize()
-        public colorBlendFactor: number = 0.2;
-        /**
-         * @param {number}: The raindrops color blended with the reflection (far)
-         */
-        @serializeAsColor3()
-        public raindropsColor2: Color3 = new Color3(0.1, 0.1, 0.6);
-        /**
-         * @param {number}: The blend factor related to the raindrops color (reflection, far)
-         */
-        @serialize()
-        public colorBlendFactor2: number = 0.2;
-        /**
-        * @param {number}: Represents the maximum length of a wave
-        */
-        @serialize()
-        public waveLength: number = 0.1;
-
-        /**
-        * @param {number}: Defines the waves speed
-        */
-        @serialize()
-        public waveSpeed: number = 1.0;
-
-        protected _renderTargets = new SmartArray<RenderTargetTexture>(16);
-
-		/*
+        /*
 		* Private members
 		*/
-        private _mesh: Nullable<AbstractMesh> = null;
+         private _mesh: Nullable<AbstractMesh> = null;
 
-        private _refractionRTT: RenderTargetTexture;
-        private _reflectionRTT: RenderTargetTexture;
+         private _reflectionRTT: RenderTargetTexture;
+         
+         private _reflectionTransform: Matrix = Matrix.Zero();   
 
-        private _reflectionTransform: Matrix = Matrix.Zero();
-        private _lastTime: number = 0;
-        private _lastDeltaTime: number = 0;
+         private _lastTime: number = 0;
+         private _lastDeltaTime: number = 0; 
 
-        private _renderId: number;
-
-        private _useLogarithmicDepth: boolean;
+         private _renderId: number;
+         private _useLogarithmicDepth: boolean;
 
         /**
 		* Constructor
 		*/
-        constructor(name: string, scene: Scene, public renderTargetSize: Vector2 = new Vector2(512, 512)) {
-            super(name, scene);
+         constructor(name: string, scene: Scene, public renderTargetSize: Vector2 = new Vector2(512, 512)) {
+             super(name, scene);
 
-            this._createRenderTargets(scene, renderTargetSize);
-
-            // Create render targets
-            this.getRenderTargetTextures = (): SmartArray<RenderTargetTexture> => {
+             this._createRenderTargets(scene, renderTargetSize);
+ 
+             this.getRenderTargetTextures = (): SmartArray<RenderTargetTexture> => {
                 this._renderTargets.reset();
                 this._renderTargets.push(this._reflectionRTT);
-                this._renderTargets.push(this._refractionRTT);
 
                 return this._renderTargets;
-            }
+             }
+         }
+ 
+         public getClassName(): string {
+             return "RaindropsMaterial";
+         }        
+ 
+         @serialize()
+         public get useLogarithmicDepth(): boolean {
+             return this._useLogarithmicDepth;
+         }
+ 
+         public set useLogarithmicDepth(value: boolean) {
+             this._useLogarithmicDepth = value && this.getScene().getEngine().getCaps().fragmentDepthSupported;
+             this._markAllSubMeshesAsMiscDirty();
+         }
 
-        }
 
-        @serialize()
-        public get useLogarithmicDepth(): boolean {
-            return this._useLogarithmicDepth;
-        }
-
-        public set useLogarithmicDepth(value: boolean) {
-            this._useLogarithmicDepth = value && this.getScene().getEngine().getCaps().fragmentDepthSupported;
-            this._markAllSubMeshesAsMiscDirty();
-        }
-
-        // Get / Set
-        public get refractionTexture(): RenderTargetTexture {
-            return this._refractionRTT;
-        }
-
-        public get reflectionTexture(): RenderTargetTexture {
+         // Get / Set
+         public get reflectionTexture(): RenderTargetTexture {
             return this._reflectionRTT;
         }
 
-        // Methods
-        public addToRenderList(node: any): void {
-            if (this._refractionRTT.renderList) {
-                this._refractionRTT.renderList.push(node);
-            }
 
+         // Methods
+         public addToRenderList(node: any): void {
             if (this._reflectionRTT.renderList) {
                 this._reflectionRTT.renderList.push(node);
             }
         }
 
-        public enableRenderTargets(enable: boolean): void {
+         public enableRenderTargets(enable: boolean): void {
             var refreshRate = enable ? 1 : 0;
-
-            this._refractionRTT.refreshRate = refreshRate;
             this._reflectionRTT.refreshRate = refreshRate;
         }
 
-        public getRenderList(): Nullable<AbstractMesh[]> {
-            return this._refractionRTT.renderList;
+         public getRenderList(): Nullable<AbstractMesh[]> {
+            return this._reflectionRTT.renderList;
         }
 
-        public get renderTargetsEnabled(): boolean {
-            return !(this._refractionRTT.refreshRate === 0);
+         public get renderTargetsEnabled(): boolean {
+            return !(this._reflectionRTT.refreshRate === 0);
         }
 
-        public needAlphaBlending(): boolean {
-            return (this.alpha < 1.0);
-        }
+         public needAlphaBlending(): boolean {
+             return (this.alpha < 1.0);
+         }
+ 
+         public needAlphaTesting(): boolean {
+             return this._diffuseTexture != null && this._diffuseTexture.hasAlpha;
+         }
+ 
+        //  protected _shouldUseAlphaFromDiffuseTexture(): boolean {
+        //      return this._diffuseTexture != null && this._diffuseTexture.hasAlpha && this._useAlphaFromDiffuseTexture;
+        //  }
+ 
+         public getAlphaTestTexture(): Nullable<BaseTexture> {
+             return this._diffuseTexture;
+         }
+ 
+         /**
+          * Child classes can use it to update shaders
+          */
+         public isReadyForSubMesh(mesh: AbstractMesh, subMesh: SubMesh, useInstances: boolean = false): boolean {            
+             if (this.isFrozen) {
+                 if (this._wasPreviouslyReady && subMesh.effect) {
+                     return true;
+                 }
+             }
+ 
+             if (!subMesh._materialDefines) {
+                 subMesh._materialDefines = new RaindropsMaterialDefines();
+             }
+ 
+             var scene = this.getScene();
+             var defines = <RaindropsMaterialDefines>subMesh._materialDefines;
 
-        public needAlphaTesting(): boolean {
-            return false;
-        }
-
-        public getAlphaTestTexture(): Nullable<BaseTexture> {
-            return null;
-        }
-
-        public isReadyForSubMesh(mesh: AbstractMesh, subMesh: SubMesh, useInstances?: boolean): boolean {
-            if (this.isFrozen) {
-                if (this._wasPreviouslyReady && subMesh.effect) {
-                    return true;
-                }
-            }
-
-            if (!subMesh._materialDefines) {
-                subMesh._materialDefines = new RaindropsMaterialDefines();
-            }
-
-            var defines = <RaindropsMaterialDefines>subMesh._materialDefines;
-            var scene = this.getScene();
-
-            if (!this.checkReadyOnEveryCall && subMesh.effect) {
-                if (this._renderId === scene.getRenderId()) {
-                    return true;
-                }
-            }
-
-            var engine = scene.getEngine();
-
-            // Textures
-            if (defines._areTexturesDirty) {
-                defines._needUVs = false;
-                if (scene.texturesEnabled) {
-                    if (this.bumpTexture && this.raindropTexture && StandardMaterial.BumpTextureEnabled) {
-                        if (!this.bumpTexture.isReady()) {
+             if (!this.checkReadyOnEveryCall && subMesh.effect) {
+                 if (this._renderId === scene.getRenderId()) {
+                     return true;
+                 }
+             }
+ 
+             var engine = scene.getEngine();
+ 
+             // Lights
+             defines._needNormals = MaterialHelper.PrepareDefinesForLights(scene, mesh, defines, true, this._maxSimultaneousLights, this._disableLighting);
+ 
+             // Textures
+             if (defines._areTexturesDirty) {
+                 defines._needUVs = false;
+                 if (scene.texturesEnabled) {
+                     if (this._diffuseTexture && StandardMaterial.DiffuseTextureEnabled) {
+                         if (!this._diffuseTexture.isReadyOrNotBlocking()) {
+                             return false;
+                         } else {
+                             MaterialHelper.PrepareDefinesForMergedUV(this._diffuseTexture, defines, "DIFFUSE");
+                             defines._needUVs = true;
+                             defines.DIFFUSE = true;
+                         }
+                    } else {
+                         defines.DIFFUSE = false;
+                    }
+                    
+                    if (this._raindropTexture) {
+                        if (!this._raindropTexture.isReadyOrNotBlocking()) {
                             return false;
-                        } else if(!this.raindropTexture.isReady()){
-                            return false;
-                        } 
-                        else{
+                        } else {
+                            MaterialHelper.PrepareDefinesForMergedUV(this._raindropTexture, defines, "RAINDROP");
                             defines._needUVs = true;
-                            defines.BUMP = true;
                         }
                     }
 
-                    if (StandardMaterial.ReflectionTextureEnabled) {
+                    if (this._raindropGroundHeightTexture) {
+                        if (!this._raindropGroundHeightTexture.isReadyOrNotBlocking()) {
+                            return false;
+                        } else {
+                            MaterialHelper.PrepareDefinesForMergedUV(this._raindropGroundHeightTexture, defines, "RAINDROPHEIGHT");
+                            defines._needUVs = true;
+                        }
+                    }
+
+                    if (this._raindropGroundNormalTexture) {
+                        if (!this._raindropGroundNormalTexture.isReadyOrNotBlocking()) {
+                            return false;
+                        } else {
+                            MaterialHelper.PrepareDefinesForMergedUV(this._raindropGroundNormalTexture, defines, "RAINDROPNORMAL");
+                            defines._needUVs = true;
+                        }
+                    }
+
+                    if (this._raindropWaterNormalTexture) {
+                        if (!this._raindropWaterNormalTexture.isReadyOrNotBlocking()) {
+                            return false;
+                        } else {
+                            MaterialHelper.PrepareDefinesForMergedUV(this._raindropWaterNormalTexture, defines, "RAINDROPWATER");
+                            defines._needUVs = true;
+                        }
+                    }
+
+
+                     if (StandardMaterial.ReflectionTextureEnabled) {
                         defines.REFLECTION = true;
                     }
-                }
-            }
+                     
+                } else {
+                     defines.DIFFUSE = false;
+                     defines.REFLECTION = false;
+                    //  defines.EMISSIVE = false;
+                    //  defines.LIGHTMAP = false;
+                    //  defines.BUMP = false;
+                    //  defines.REFRACTION = false;
+                 }
+             }
+ 
+             // Misc.
+             MaterialHelper.PrepareDefinesForMisc(mesh, scene, this._useLogarithmicDepth, this.pointsCloud, this.fogEnabled, defines);
+ 
+             // Attribs
+             MaterialHelper.PrepareDefinesForAttributes(mesh, defines, true, true);
+             
+             // Values that need to be evaluated on every frame
+             MaterialHelper.PrepareDefinesForFrameBoundValues(scene, engine, defines, useInstances);
+             
+             this._mesh = mesh;
 
-            MaterialHelper.PrepareDefinesForFrameBoundValues(scene, engine, defines, useInstances ? true : false);
+             // Get correct effect      
+             if (defines.isDirty) {
+                 defines.markAsProcessed();
+                 scene.resetCachedMaterial();
+ 
+                 // Fallbacks
+                 var fallbacks = new EffectFallbacks();
+                //  if (defines.REFLECTION) {
+                //      fallbacks.addFallback(0, "REFLECTION");
+                //  }
+ 
+                //  if (defines.SPECULAR) {
+                //      fallbacks.addFallback(0, "SPECULAR");
+                //  }
+ 
+                //  if (defines.BUMP) {
+                //      fallbacks.addFallback(0, "BUMP");
+                //  }
+ 
+                 if (defines.FOG) {
+                     fallbacks.addFallback(1, "FOG");
+                 }
+ 
+                 if (defines.POINTSIZE) {
+                     fallbacks.addFallback(0, "POINTSIZE");
+                 }
+ 
+                 if (defines.LOGARITHMICDEPTH) {
+                     fallbacks.addFallback(0, "LOGARITHMICDEPTH");
+                 }
+ 
+                 MaterialHelper.HandleFallbacksForShadows(defines, fallbacks, this._maxSimultaneousLights);
+ 
+                //  if (defines.SPECULARTERM) {
+                //      fallbacks.addFallback(0, "SPECULARTERM");
+                //  }
+ 
+                 
+ 
+                 //Attributes
+                 var attribs = [VertexBuffer.PositionKind];
+ 
+                 if (defines.NORMAL) {
+                     attribs.push(VertexBuffer.NormalKind);
+                 }
+ 
+                 if (defines.UV1) {
+                     attribs.push(VertexBuffer.UVKind);
+                 }
+ 
+                 if (defines.UV2) {
+                     attribs.push(VertexBuffer.UV2Kind);
+                 }
+ 
+                 if (defines.VERTEXCOLOR) {
+                     attribs.push(VertexBuffer.ColorKind);
+                 }
+ 
+                 MaterialHelper.PrepareAttributesForBones(attribs, mesh, defines, fallbacks);
+                 MaterialHelper.PrepareAttributesForInstances(attribs, defines);
+                 
+                 var shaderName = "raindrops";
+                 
+                 var uniforms = ["world", "view", "viewProjection", "vEyePosition", "vLightsType", "vAmbientColor", "vDiffuseColor", "vSpecularColor",
+                     "vFogInfos", "vFogColor", "pointSize",
+                     "vDiffuseInfos", 
+                     "mBones",
+                     "vClipPlane", 
+                     "raindropMatrix", "diffuseMatrix", "groundHeightMatrix", "groundNormalMatrix", "waterNormalMatrix",
+                     "logarithmicDepthConstant",
+                     
+                     // Raindrop
+                     "worldReflectionViewProjection", "raindropPuddleAmount", "raindropSpeed", "time"
+                 ];
+ 
+                 var samplers = ["diffuseSampler", "raindropSampler", "reflectionSampler", "groundHeightSampler", "groundNormalSampler", "waterNormalSampler"]
+ 
+                 // var uniformBuffers = ["Material", "Scene"];
+                 var uniformBuffers = new Array<string>()
+                 
+                 MaterialHelper.PrepareUniformsAndSamplersList(<EffectCreationOptions>{
+                     uniformsNames: uniforms, 
+                     uniformBuffersNames: uniformBuffers,
+                     samplers: samplers, 
+                     defines: defines, 
+                     maxSimultaneousLights: this._maxSimultaneousLights
+                 });
+ 
+                 var join = defines.toString();
 
-            MaterialHelper.PrepareDefinesForMisc(mesh, scene, this._useLogarithmicDepth, this.pointsCloud, this.fogEnabled, defines);
-
-            if (defines._areMiscDirty) {
-                if (this._fresnelSeparate) {
-                    defines.FRESNELSEPARATE = true;
-                }
-
-                if (this._bumpSuperimpose) {
-                    defines.BUMPSUPERIMPOSE = true;
-                }
-
-                if (this._bumpAffectsReflection) {
-                    defines.BUMPAFFECTSREFLECTION = true;
-                }
-            }
-
-            // Lights
-            defines._needNormals = MaterialHelper.PrepareDefinesForLights(scene, mesh, defines, true, this._maxSimultaneousLights, this._disableLighting);
-
-            // Attribs
-            MaterialHelper.PrepareDefinesForAttributes(mesh, defines, true, true);
-
-            this._mesh = mesh;
-
-            // Get correct effect      
-            if (defines.isDirty) {
-                defines.markAsProcessed();
-                scene.resetCachedMaterial();
-
-                // Fallbacks
-                var fallbacks = new EffectFallbacks();
-                if (defines.FOG) {
-                    fallbacks.addFallback(1, "FOG");
-                }
-
-                if (defines.LOGARITHMICDEPTH) {
-                    fallbacks.addFallback(0, "LOGARITHMICDEPTH");
-                }
-
-                MaterialHelper.HandleFallbacksForShadows(defines, fallbacks, this.maxSimultaneousLights);
-
-                if (defines.NUM_BONE_INFLUENCERS > 0) {
-                    fallbacks.addCPUSkinningFallback(0, mesh);
-                }
-
-                //Attributes
-                var attribs = [VertexBuffer.PositionKind];
-
-                if (defines.NORMAL) {
-                    attribs.push(VertexBuffer.NormalKind);
-                }
-
-                if (defines.UV1) {
-                    attribs.push(VertexBuffer.UVKind);
-                }
-
-                if (defines.UV2) {
-                    attribs.push(VertexBuffer.UV2Kind);
-                }
-
-                if (defines.VERTEXCOLOR) {
-                    attribs.push(VertexBuffer.ColorKind);
-                }
-
-                MaterialHelper.PrepareAttributesForBones(attribs, mesh, defines, fallbacks);
-                MaterialHelper.PrepareAttributesForInstances(attribs, defines);
-
-                // Legacy browser patch
-                var shaderName = "raindrops";
-                var join = defines.toString();
-                var uniforms = ["world", "view", "viewProjection", "vEyePosition", "vLightsType", "vDiffuseColor", "vSpecularColor",
-                    "vFogInfos", "vFogColor", "pointSize",
-                    "vNormalInfos",
-                    "mBones",
-                    "vClipPlane", "normalMatrix",
-                    "logarithmicDepthConstant",
-
-                    // raindrops
-                    "worldReflectionViewProjection", "windDirection", "waveLength", "time", "windForce",
-                    "cameraPosition", "bumpHeight", "waveHeight", "raindropsColor", "raindropsColor2", "colorBlendFactor", "colorBlendFactor2", "waveSpeed"
-                ]
-                var samplers = ["normalSampler",
-                    // raindrops
-                    "raindropSampler",
-
-                    "refractionSampler", "reflectionSampler"
-                ];
-                var uniformBuffers = new Array<string>()
-
-                MaterialHelper.PrepareUniformsAndSamplersList(<EffectCreationOptions>{
-                    uniformsNames: uniforms,
-                    uniformBuffersNames: uniformBuffers,
-                    samplers: samplers,
-                    defines: defines,
-                    maxSimultaneousLights: this.maxSimultaneousLights
-                });
-                subMesh.setEffect(scene.getEngine().createEffect(shaderName,
-                    <EffectCreationOptions>{
-                        attributes: attribs,
-                        uniformsNames: uniforms,
-                        uniformBuffersNames: uniformBuffers,
-                        samplers: samplers,
-                        defines: join,
-                        fallbacks: fallbacks,
-                        onCompiled: this.onCompiled,
-                        onError: this.onError,
-                        indexParameters: { maxSimultaneousLights: this._maxSimultaneousLights }
-                    }, engine), defines);
-
-            }
-            if (!subMesh.effect || !subMesh.effect.isReady()) {
-                return false;
-            }
-
-            this._renderId = scene.getRenderId();
-            this._wasPreviouslyReady = true;
-
-            return true;
-        }
-
-        public bindForSubMesh(world: Matrix, mesh: Mesh, subMesh: SubMesh): void {
-            var scene = this.getScene();
-
-            var defines = <RaindropsMaterialDefines>subMesh._materialDefines;
-            if (!defines) {
+                 subMesh.setEffect(scene.getEngine().createEffect(shaderName, <EffectCreationOptions>{
+                     attributes: attribs,
+                     uniformsNames: uniforms,
+                     uniformBuffersNames: uniformBuffers,
+                     samplers: samplers,
+                     defines: join,
+                     fallbacks: fallbacks,
+                     onCompiled: this.onCompiled,
+                     onError: this.onError,
+                     indexParameters: { maxSimultaneousLights: this._maxSimultaneousLights }
+                 }, engine), defines);
+                 
+             }
+ 
+             if (!subMesh.effect || !subMesh.effect.isReady()) {
+                 return false;
+             }
+ 
+             this._renderId = scene.getRenderId();
+             this._wasPreviouslyReady = true;
+ 
+             return true;
+         }
+ 
+ 
+         public bindForSubMesh(world: Matrix, mesh: Mesh, subMesh: SubMesh): void {
+             var scene = this.getScene();
+ 
+             var defines = <RaindropsMaterialDefines>subMesh._materialDefines;
+             if (!defines) {
+                 return;
+             }
+ 
+             var effect = subMesh.effect;
+             if (!effect || !this._mesh) {
                 return;
-            }
-
-            var effect = subMesh.effect;
-            if (!effect || !this._mesh) {
-                return;
-            }
-            this._activeEffect = effect;
-
-            // Matrices        
-            this.bindOnlyWorldMatrix(world);
-            this._activeEffect.setMatrix("viewProjection", scene.getTransformMatrix());
-
-            // Bones
-            MaterialHelper.BindBonesParameters(mesh, this._activeEffect);
-
-            if (this._mustRebind(scene, effect)) {
+             }
+             this._activeEffect = effect;
+ 
+             // Matrices        
+             this.bindOnlyWorldMatrix(world);
+             this._activeEffect.setMatrix("viewProjection", scene.getTransformMatrix());
+            
+             //let mustRebind = this._mustRebind(scene, effect, mesh.visibility);
+             let mustRebind = this._mustRebind(scene, effect);
+             
+             // Bones
+             MaterialHelper.BindBonesParameters(mesh, this._activeEffect);
+             
+             if (mustRebind) {
+                
                 // Textures        
-                if (this.bumpTexture && this.raindropTexture && StandardMaterial.BumpTextureEnabled) {
-                    this._activeEffect.setTexture("normalSampler", this.bumpTexture);
-
-                    this._activeEffect.setTexture("raindropSampler", this.raindropTexture);                    
-
-                    //this._activeEffect.setFloat2("vNormalInfos", this.bumpTexture.coordinatesIndex, this.bumpTexture.level);
-                    //this._activeEffect.setMatrix("normalMatrix", this.bumpTexture.getTextureMatrix());
-                    this._activeEffect.setFloat2("vNormalInfos", this.raindropTexture.coordinatesIndex, this.raindropTexture.level);
-                    this._activeEffect.setMatrix("normalMatrix", this.raindropTexture.getTextureMatrix());
+                if (this.diffuseTexture && StandardMaterial.DiffuseTextureEnabled) {
+                    effect.setTexture("diffuseSampler", this.diffuseTexture);
+                    effect.setFloat2("vDiffuseInfos", this.diffuseTexture.coordinatesIndex, this.diffuseTexture.level);
+                    effect.setMatrix("diffuseMatrix", this.diffuseTexture.getTextureMatrix());
+                }
+                
+                if(this.raindropTexture){
+                    effect.setTexture("raindropSampler", this.raindropTexture);
+                    effect.setMatrix("raindropMatrix", this.raindropTexture.getTextureMatrix());   
                 }
 
+                if(this.raindropGroundHeightTexture){
+                    effect.setTexture("groundHeightSampler", this.raindropGroundHeightTexture);
+                    effect.setMatrix("groundHeightMatrix", this.raindropGroundHeightTexture.getTextureMatrix());   
+                }
+
+                if(this.raindropGroundNormalTexture){
+                    effect.setTexture("groundNormalSampler", this.raindropGroundNormalTexture);
+                    effect.setMatrix("groundNormalMatrix", this.raindropGroundNormalTexture.getTextureMatrix());   
+                }
+
+                if(this.raindropWaterNormalTexture){
+                    effect.setTexture("waterNormalSampler", this.raindropWaterNormalTexture);
+                    effect.setMatrix("waterNormalMatrix", this.raindropWaterNormalTexture.getTextureMatrix());   
+                }
 
 
                 // Clip plane
-                MaterialHelper.BindClipPlane(this._activeEffect, scene);
+                MaterialHelper.BindClipPlane(effect, scene);
 
                 // Point size
                 if (this.pointsCloud) {
-                    this._activeEffect.setFloat("pointSize", this.pointSize);
+                    effect.setFloat("pointSize", this.pointSize);
                 }
 
-                MaterialHelper.BindEyePosition(effect, scene);
-            }
+                 // Colors
+                 scene.ambientColor.multiplyToRef(this.ambientColor, this._globalAmbientColor);
+                 MaterialHelper.BindEyePosition(effect, scene);
+                 effect.setColor3("vAmbientColor", this._globalAmbientColor);
+                 effect.setColor4("vDiffuseColor", this.diffuseColor, this.alpha * mesh.visibility);
+                 effect.setColor4("vSpecularColor", this.specularColor, this.specularPower);
+             }
+ 
+             if (mustRebind || !this.isFrozen) {
+                 // Lights
+                 if (scene.lightsEnabled && !this._disableLighting) {
+                     MaterialHelper.BindLights(scene, mesh, effect, defines, this._maxSimultaneousLights);
+                 }
+ 
+                 // View
+                 if (scene.fogEnabled && mesh.applyFog && scene.fogMode !== Scene.FOGMODE_NONE) {
+                     //this.bindView(effect);
+                     effect.setMatrix("view", scene.getViewMatrix());                     
+                 }
+                 
+                 // Fog
+                 MaterialHelper.BindFogParameters(scene, mesh, effect);
+            
+                 // Log. depth
+                 MaterialHelper.BindLogDepth(defines, effect, scene);
+             }
 
-            this._activeEffect.setColor4("vDiffuseColor", this.diffuseColor, this.alpha * mesh.visibility);
-
-            if (defines.SPECULARTERM) {
-                this._activeEffect.setColor4("vSpecularColor", this.specularColor, this.specularPower);
-            }
-
-            if (scene.lightsEnabled && !this.disableLighting) {
-                MaterialHelper.BindLights(scene, mesh, this._activeEffect, defines, this.maxSimultaneousLights);
-            }
-
-            // View
-            if (scene.fogEnabled && mesh.applyFog && scene.fogMode !== Scene.FOGMODE_NONE) {
-                this._activeEffect.setMatrix("view", scene.getViewMatrix());
-            }
-
-            // Fog
-            MaterialHelper.BindFogParameters(scene, mesh, this._activeEffect);
-
-            // Log. depth
-            MaterialHelper.BindLogDepth(defines, this._activeEffect, scene);
-
-            // Raindrops
+             // Raindrop reflection
             if (StandardMaterial.ReflectionTextureEnabled) {
-                this._activeEffect.setTexture("refractionSampler", this._refractionRTT);
-                this._activeEffect.setTexture("reflectionSampler", this._reflectionRTT);
+                effect.setTexture("reflectionSampler", this._reflectionRTT);
             }
 
-            var wrvp = this._mesh.getWorldMatrix().multiply(this._reflectionTransform).multiply(scene.getProjectionMatrix());
+            var wrvp = this._mesh.getWorldMatrix().multiply(this._reflectionTransform).multiply(scene.getProjectionMatrix());            
 
-            // Add delta time. Prevent adding delta time if it hasn't changed.
+            //Add delta time. Prevent adding delta time if it hasn't changed.
             let deltaTime = scene.getEngine().getDeltaTime();
             if (deltaTime !== this._lastDeltaTime) {
                 this._lastDeltaTime = deltaTime;
                 this._lastTime += this._lastDeltaTime;
             }
 
-            this._activeEffect.setMatrix("worldReflectionViewProjection", wrvp);
-            this._activeEffect.setVector2("windDirection", this.windDirection);
-            this._activeEffect.setFloat("waveLength", this.waveLength);
-            this._activeEffect.setFloat("time", this._lastTime / 100000);
-            this._activeEffect.setFloat("windForce", this.windForce);
-            this._activeEffect.setFloat("waveHeight", this.waveHeight);
-            this._activeEffect.setFloat("bumpHeight", this.bumpHeight);
-            this._activeEffect.setColor4("raindropsColor", this.raindropsColor, 1.0);
-            this._activeEffect.setFloat("colorBlendFactor", this.colorBlendFactor);
-            this._activeEffect.setColor4("raindropsColor2", this.raindropsColor2, 1.0);
-            this._activeEffect.setFloat("colorBlendFactor2", this.colorBlendFactor2);
-            this._activeEffect.setFloat("waveSpeed", this.waveSpeed);
+            effect.setMatrix("worldReflectionViewProjection", wrvp);
+            effect.setFloat("time", this._lastTime / 100000);
+            effect.setFloat("raindropPuddleAmount", this.raindropPuddleAmount);
+            effect.setFloat("raindropSpeed", this.raindropSpeed);
 
             this._afterBind(mesh, this._activeEffect);
-        }
+         }
+         
 
-        private _createRenderTargets(scene: Scene, renderTargetSize: Vector2): void {
+         private _createRenderTargets(scene: Scene, renderTargetSize: Vector2): void {
             // Render targets
-            this._refractionRTT = new RenderTargetTexture(name + "_refraction", { width: renderTargetSize.x, height: renderTargetSize.y }, scene, false, true);
-            this._refractionRTT.wrapU = BABYLON.Texture.MIRROR_ADDRESSMODE;
-            this._refractionRTT.wrapV = BABYLON.Texture.MIRROR_ADDRESSMODE;
-            this._refractionRTT.ignoreCameraViewport = true;
-
             this._reflectionRTT = new RenderTargetTexture(name + "_reflection", { width: renderTargetSize.x, height: renderTargetSize.y }, scene, false, true);
             this._reflectionRTT.wrapU = BABYLON.Texture.MIRROR_ADDRESSMODE;
             this._reflectionRTT.wrapV = BABYLON.Texture.MIRROR_ADDRESSMODE;
@@ -515,27 +528,6 @@ module BABYLON {
             var clipPlane: Nullable<Plane> = null;
             var savedViewMatrix: Matrix;
             var mirrorMatrix = Matrix.Zero();
-
-            this._refractionRTT.onBeforeRender = () => {
-                if (this._mesh) {
-                    isVisible = this._mesh.isVisible;
-                    this._mesh.isVisible = false;
-                }
-                // Clip plane
-                clipPlane = scene.clipPlane;
-
-                var positiony = this._mesh ? this._mesh.position.y : 0.0;
-                scene.clipPlane = Plane.FromPositionAndNormal(new Vector3(0, positiony + 0.05, 0), new Vector3(0, 1, 0));
-            };
-
-            this._refractionRTT.onAfterRender = () => {
-                if (this._mesh) {
-                    this._mesh.isVisible = isVisible;
-                }
-
-                // Clip plane 
-                scene.clipPlane = clipPlane;
-            };
 
             this._reflectionRTT.onBeforeRender = () => {
                 if (this._mesh) {
@@ -574,72 +566,116 @@ module BABYLON {
             };
         }
 
-        public getAnimatables(): IAnimatable[] {
-            var results = [];
 
-            if (this.bumpTexture && this.bumpTexture.animations && this.bumpTexture.animations.length > 0) {
-                results.push(this.bumpTexture);
-            }
 
-            if (this.raindropTexture && this.raindropTexture.animations && this.raindropTexture.animations.length > 0) {
-                results.push(this.raindropTexture);
-            }
+         public getAnimatables(): IAnimatable[] {
+             var results = [];
 
-            if (this._reflectionRTT && this._reflectionRTT.animations && this._reflectionRTT.animations.length > 0) {
+             if (this._diffuseTexture && this._diffuseTexture.animations && this._diffuseTexture.animations.length > 0) {
+                 results.push(this._diffuseTexture);
+             }
+                         
+             if (this._raindropTexture && this._raindropTexture.animations && this._raindropTexture.animations.length > 0) {
+                results.push(this._raindropTexture);
+             }
+                         
+             if (this._raindropGroundHeightTexture && this._raindropGroundHeightTexture.animations && this._raindropGroundHeightTexture.animations.length > 0) {
+                results.push(this._raindropGroundHeightTexture);
+             }
+                         
+             if (this._raindropGroundNormalTexture && this._raindropGroundNormalTexture.animations && this._raindropGroundNormalTexture.animations.length > 0) {
+                results.push(this._raindropGroundNormalTexture);
+             }
+
+             if (this._raindropWaterNormalTexture && this._raindropWaterNormalTexture.animations && this._raindropWaterNormalTexture.animations.length > 0) {
+                results.push(this._raindropWaterNormalTexture);
+             }
+             
+             if (this._reflectionRTT && this._reflectionRTT.animations && this._reflectionRTT.animations.length > 0) {
                 results.push(this._reflectionRTT);
             }
-            if (this._refractionRTT && this._refractionRTT.animations && this._refractionRTT.animations.length > 0) {
-                results.push(this._refractionRTT);
+            
+             return results;
+         }
+ 
+         public getActiveTextures(): BaseTexture[] {
+             var activeTextures = super.getActiveTextures();
+
+            if (this._diffuseTexture) {
+                 activeTextures.push(this._diffuseTexture);
             }
 
-            return results;
-        }
-
-        public getActiveTextures(): BaseTexture[] {
-            var activeTextures = super.getActiveTextures();
-
-            if (this._bumpTexture) {
-                activeTextures.push(this._bumpTexture);
-            }
-
-            if (this._raindropTexture) {
+            if(this._raindropTexture){
                 activeTextures.push(this._raindropTexture);
             }
 
-            return activeTextures;
-        }
+            if(this._raindropGroundHeightTexture){
+                activeTextures.push(this._raindropGroundHeightTexture);
+            }
 
-        public hasTexture(texture: BaseTexture): boolean {
-            if (super.hasTexture(texture)) {
+            if(this._raindropGroundNormalTexture){
+                activeTextures.push(this._raindropGroundNormalTexture);
+            }
+
+            if(this._raindropWaterNormalTexture){
+                activeTextures.push(this._raindropWaterNormalTexture);
+            }
+ 
+             return activeTextures;
+         }
+ 
+         public hasTexture(texture: BaseTexture): boolean {
+             if (super.hasTexture(texture)) {
+                 return true;
+             }
+
+             if (this._diffuseTexture === texture) {
+                 return true;
+             }
+             
+             if(this._raindropTexture === texture){
                 return true;
-            }
+             }
 
-            if (this._bumpTexture === texture) {
+             if(this._raindropGroundHeightTexture === texture){
                 return true;
-            }
+             }
 
-            if (this._raindropTexture === texture) {
+             if(this._raindropGroundNormalTexture === texture){
                 return true;
+             }
+
+             if(this._raindropWaterNormalTexture === texture){
+                return true;
+             }
+ 
+             return false;    
+         }        
+ 
+         public dispose(forceDisposeEffect?: boolean): void {
+
+            if (this._diffuseTexture) {
+                this._diffuseTexture.dispose();
             }
 
-            return false;
-        }
-
-        public dispose(forceDisposeEffect?: boolean): void {
-            if (this.bumpTexture) {
-                this.bumpTexture.dispose();
+            if (this._raindropTexture){
+                this._raindropTexture.dispose();
             }
 
-            if (this.raindropTexture) {
-                this.raindropTexture.dispose();
+            if (this._raindropGroundHeightTexture){
+                this._raindropGroundHeightTexture.dispose();
             }
 
-            var index = this.getScene().customRenderTargets.indexOf(this._refractionRTT);
-            if (index != -1) {
-                this.getScene().customRenderTargets.splice(index, 1);
+            if (this._raindropGroundNormalTexture){
+                this._raindropGroundNormalTexture.dispose();
             }
-            index = -1;
-            index = this.getScene().customRenderTargets.indexOf(this._reflectionRTT);
+
+            if (this._raindropWaterNormalTexture){
+                this._raindropWaterNormalTexture.dispose();
+            }
+
+
+            var index = this.getScene().customRenderTargets.indexOf(this._reflectionRTT);
             if (index != -1) {
                 this.getScene().customRenderTargets.splice(index, 1);
             }
@@ -647,37 +683,26 @@ module BABYLON {
             if (this._reflectionRTT) {
                 this._reflectionRTT.dispose();
             }
-            if (this._refractionRTT) {
-                this._refractionRTT.dispose();
-            }
-
-            super.dispose(forceDisposeEffect);
-        }
-
-        public clone(name: string): RaindropsMaterial {
-            return SerializationHelper.Clone(() => new RaindropsMaterial(name, this.getScene()), this);
-        }
-
-        public serialize(): any {
+             
+             super.dispose(forceDisposeEffect);
+         }
+ 
+         public clone(name: string): RaindropsMaterial {
+             return SerializationHelper.Clone(() => new RaindropsMaterial(name, this.getScene()), this);
+         }
+ 
+         public serialize(): any {
             var serializationObject = SerializationHelper.Serialize(this);
-            serializationObject.customType = "BABYLON.RaindropsMaterial";
+            serializationObject.customType = "BABYLON.RaindropMaterial";
             serializationObject.reflectionTexture.isRenderTarget = true;
-            serializationObject.refractionTexture.isRenderTarget = true;
             return serializationObject;
-        }
+         }
 
-        public getClassName(): string {
-            return "RaindropsMaterial";
-        }
-
-        // Statics
-        public static Parse(source: any, scene: Scene, rootUrl: string): RaindropsMaterial {
-            return SerializationHelper.Parse(() => new RaindropsMaterial(source.name, scene), source, scene, rootUrl);
-        }
-
-        public static CreateDefaultMesh(name: string, scene: Scene): Mesh {
-            var mesh = Mesh.CreateGround(name, 512, 512, 32, scene, false);
-            return mesh;
-        }
-    }
-}
+         // Statics
+         public static Parse(source: any, scene: Scene, rootUrl: string): RaindropsMaterial {
+             return SerializationHelper.Parse(() => new RaindropsMaterial(source.name, scene), source, scene, rootUrl);
+         }
+             
+     }
+ } 
+ 

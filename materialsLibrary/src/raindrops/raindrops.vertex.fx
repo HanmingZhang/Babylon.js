@@ -1,5 +1,6 @@
 precision highp float;
 
+
 // Attributes
 attribute vec3 position;
 #ifdef NORMAL
@@ -15,25 +16,50 @@ attribute vec2 uv2;
 attribute vec4 color;
 #endif
 
+uniform mat4 worldReflectionViewProjection;
+uniform mat4 viewProjection;
+
+#include<helperFunctions>
+
 #include<bonesDeclaration>
 
 // Uniforms
 #include<instancesDeclaration>
 
-uniform mat4 view;
-uniform mat4 viewProjection;
+// #ifdef MAINUV1
+// 	varying vec2 vMainUV1;
+// #endif
 
-#ifdef BUMP
-varying vec2 vNormalUV;
-#ifdef BUMPSUPERIMPOSE
-    varying vec2 vNormalUV2;
-#endif
-uniform mat4 normalMatrix;
-uniform vec2 vNormalInfos;
+// #ifdef MAINUV2
+// 	varying vec2 vMainUV2;
+// #endif
+
+#if defined(DIFFUSE)
+varying vec2 vDiffuseUV;
 #endif
 
-#ifdef POINTSIZE
-uniform float pointSize;
+// #if defined(AMBIENT) && AMBIENTDIRECTUV == 0
+// varying vec2 vAmbientUV;
+// #endif
+
+// #if defined(OPACITY) && OPACITYDIRECTUV == 0
+// varying vec2 vOpacityUV;
+// #endif
+
+// #if defined(EMISSIVE) && EMISSIVEDIRECTUV == 0
+// varying vec2 vEmissiveUV;
+// #endif
+
+// #if defined(LIGHTMAP) && LIGHTMAPDIRECTUV == 0
+// varying vec2 vLightmapUV;
+// #endif
+
+// #if defined(SPECULAR) && defined(SPECULARTERM) && SPECULARDIRECTUV == 0
+// varying vec2 vSpecularUV;
+// #endif
+
+#if defined(BUMP)
+varying vec2 vBumpUV;
 #endif
 
 // Output
@@ -46,33 +72,73 @@ varying vec3 vNormalW;
 varying vec4 vColor;
 #endif
 
+#include<bumpVertexDeclaration>
+
 #include<clipPlaneVertexDeclaration>
 
 #include<fogVertexDeclaration>
 #include<__decl__lightFragment>[0..maxSimultaneousLights]
 
-#include<logDepthDeclaration>
+// #include<morphTargetsVertexGlobalDeclaration>
+// #include<morphTargetsVertexDeclaration>[0..maxSimultaneousMorphTargets]
 
-// Raindrops uniforms
-uniform mat4 worldReflectionViewProjection;
-uniform vec2 windDirection;
-uniform float waveLength;
+// #ifdef REFLECTIONMAP_SKYBOX
+// varying vec3 vPositionUVW;
+// #endif
+
+// #if defined(REFLECTIONMAP_EQUIRECTANGULAR_FIXED) || defined(REFLECTIONMAP_MIRROREDEQUIRECTANGULAR_FIXED)
+// varying vec3 vDirectionW;
+// #endif
+
 uniform float time;
-uniform float windForce;
-uniform float waveHeight;
-uniform float waveSpeed;
 
-// Raindrops varyings
+uniform mat4 raindropMatrix;
+varying vec2 vRaindropUV;
+
+uniform mat4 groundHeightMatrix;
+varying vec2 vRaindropGroundHeightUV;
+
+uniform mat4 groundNormalMatrix;
+varying vec2 vRaindropGroundNormalUV;
+
+uniform mat4 waterNormalMatrix;
+varying vec2 vRaindropWaterNormalUV;
+
+#ifdef DIFFUSE
+uniform mat4 diffuseMatrix;
+uniform vec2 vDiffuseInfos;
+#endif
+
+
+#ifdef REFLECTION
+// raindrop reflection
 varying vec3 vPosition;
-varying vec3 vRefractionMapTexCoord;
 varying vec3 vReflectionMapTexCoord;
+#endif
+
+#include<logDepthDeclaration>
 
 
 
 void main(void) {
+// 	vec3 positionUpdated = position;
+// #ifdef NORMAL	
+// 	vec3 normalUpdated = normal;
+// #endif
+// #ifdef TANGENT
+// 	vec4 tangentUpdated = tangent;
+// #endif
 
-    #include<instancesVertex>
-    #include<bonesVertex>
+// #include<morphTargetsVertex>[0..maxSimultaneousMorphTargets]
+
+// #ifdef REFLECTIONMAP_SKYBOX
+// 	vPositionUVW = positionUpdated;
+// #endif 
+
+#include<instancesVertex>
+#include<bonesVertex>
+
+	gl_Position = viewProjection * finalWorld * vec4(position, 1.0);
 
 	vec4 worldPos = finalWorld * vec4(position, 1.0);
 	vPositionW = vec3(worldPos);
@@ -80,6 +146,10 @@ void main(void) {
 #ifdef NORMAL
 	vNormalW = normalize(vec3(finalWorld * vec4(normal, 0.0)));
 #endif
+
+// #if defined(REFLECTIONMAP_EQUIRECTANGULAR_FIXED) || defined(REFLECTIONMAP_MIRROREDEQUIRECTANGULAR_FIXED)
+// 	vDirectionW = normalize(vec3(finalWorld * vec4(positionUpdated, 0.0)));
+// #endif
 
 	// Texture coordinates
 #ifndef UV1
@@ -89,66 +159,63 @@ void main(void) {
 	vec2 uv2 = vec2(0., 0.);
 #endif
 
-#ifdef BUMP
-	if (vNormalInfos.x == 0.)
-	{
-		//vNormalUV = vec2(normalMatrix * vec4((uv * 1.0) / waveLength + time * windForce * windDirection, 1.0, 0.0));
-		vNormalUV = vec2(normalMatrix * vec4((uv * 1.0) / waveLength + 1.0 * windForce * windDirection, 1.0, 0.0));
+// #ifdef MAINUV1
+// 	vMainUV1 = uv;
+// #endif
 
-        #ifdef BUMPSUPERIMPOSE
-		    vNormalUV2 = vec2(normalMatrix * vec4((uv * 0.721) / waveLength + time * 1.2 * windForce * windDirection, 1.0, 0.0));
-		#endif
+// #ifdef MAINUV2
+// 	vMainUV2 = uv2;
+// #endif
+
+#if defined(DIFFUSE)
+	if (vDiffuseInfos.x == 0.)
+	{
+		vDiffuseUV = vec2(diffuseMatrix * vec4(uv, 1.0, 0.0));
 	}
 	else
 	{
-		//vNormalUV = vec2(normalMatrix * vec4((uv2 * 1.0) / waveLength + time * windForce * windDirection , 1.0, 0.0));
-		vNormalUV = vec2(normalMatrix * vec4((uv2 * 1.0) / waveLength + 1.0 * windForce * windDirection , 1.0, 0.0));
-
-        #ifdef BUMPSUPERIMPOSE
-    		vNormalUV2 = vec2(normalMatrix * vec4((uv2 * 0.721) / waveLength + time * 1.2 * windForce * windDirection , 1.0, 0.0));
-    	#endif
+		vDiffuseUV = vec2(diffuseMatrix * vec4(uv2, 1.0, 0.0));
 	}
 #endif
 
-	// Clip plane
-	#include<clipPlaneVertex>
 
-	// Fog
-    #include<fogVertex>
-	
-	// Shadows
-    #include<shadowsVertex>[0..maxSimultaneousLights]
-    
-	// Vertex color
+#if defined(BUMP)
+	if (vBumpInfos.x == 0.)
+	{
+		vBumpUV = vec2(bumpMatrix * vec4(uv, 1.0, 0.0));
+	}
+	else
+	{
+		vBumpUV = vec2(bumpMatrix * vec4(uv2, 1.0, 0.0));
+	}
+#endif
+
+	vRaindropUV = vec2(raindropMatrix * vec4(uv, 1.0, 0.0));
+
+	vRaindropGroundHeightUV = vec2(groundHeightMatrix * vec4(uv, 1.0, 0.0));
+
+	vRaindropGroundNormalUV = vec2(groundNormalMatrix * vec4(uv, 1.0, 0.0));
+
+	float raindropWaterNormalUVScale = 12.0;
+
+	vRaindropWaterNormalUV = vec2(waterNormalMatrix * vec4((uv * raindropWaterNormalUVScale) + time * vec2(10.0, 10.0), 1.0, 0.0));
+
+
+#include<bumpVertex>
+#include<clipPlaneVertex>
+#include<fogVertex>
+#include<shadowsVertex>[0..maxSimultaneousLights]
+
 #ifdef VERTEXCOLOR
+	// Vertex color
 	vColor = color;
 #endif
 
-	// Point size
-#ifdef POINTSIZE
-	gl_PointSize = pointSize;
-#endif
-
-	vec3 p = position;
-	// float newY = (sin(((p.x / 0.05) + time * waveSpeed)) * waveHeight * windDirection.x * 5.0)
-	// 		   + (cos(((p.z / 0.05) +  time * waveSpeed)) * waveHeight * windDirection.y * 5.0);
-
-	float newY = (sin(((p.x / 0.05) + 1.0 * waveSpeed)) * waveHeight * windDirection.x * 5.0)
-			   + (cos(((p.z / 0.05) +  1.0 * waveSpeed)) * waveHeight * windDirection.y * 5.0);
-
-	p.y += abs(newY);
-	
-	gl_Position = viewProjection * finalWorld * vec4(p, 1.0);
+#include<pointCloudVertex>
 
 #ifdef REFLECTION
-	worldPos = viewProjection * finalWorld * vec4(p, 1.0);
-	
-	// Raindrops
+	// Water
 	vPosition = position;
-	
-	vRefractionMapTexCoord.x = 0.5 * (worldPos.w + worldPos.x);
-	vRefractionMapTexCoord.y = 0.5 * (worldPos.w + worldPos.y);
-	vRefractionMapTexCoord.z = worldPos.w;
 	
 	worldPos = worldReflectionViewProjection * vec4(position, 1.0);
 	vReflectionMapTexCoord.x = 0.5 * (worldPos.w + worldPos.x);
@@ -156,6 +223,6 @@ void main(void) {
 	vReflectionMapTexCoord.z = worldPos.w;
 #endif
 
-#include<logDepthVertex>
 
+#include<logDepthVertex>
 }

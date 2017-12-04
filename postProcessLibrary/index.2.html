@@ -48,133 +48,142 @@
 			BABYLONDEVTOOLS.Loader.debugShortcut(engine);	
 			var divFps = document.getElementById("fps");
 
+			// Scene Configuration
 			var scene = new BABYLON.Scene(engine);
-
-
 			scene.clearColor = new BABYLON.Color4(0.02, 0.02, 0.02, 1.0);
 			scene.imageProcessingConfiguration.contrast = 1.6;
 			scene.imageProcessingConfiguration.exposure = 0.6;
 			scene.imageProcessingConfiguration.toneMappingEnabled = true;
 
-			var hdrTexture = new BABYLON.CubeTexture.CreateFromPrefilteredData("../assets/environment.dds", scene);
-			hdrTexture.gammaSpace = false;
+			// Camera
+			var camera = new BABYLON.ArcRotateCamera("Camera", Math.PI / 2, Math.PI / 6, 1.5, BABYLON.Vector3.Zero(), scene);
+			camera.attachControl(canvas, true);
+			camera.minZ = 0.1;
 
-    		var sun = new BABYLON.PointLight("Omni0", new BABYLON.Vector3(60, 100, 10), scene);
-						
+			// Light
+			var sun = new BABYLON.PointLight("Omni", new BABYLON.Vector3(0, 60, 10), scene);
+			var ambient = new BABYLON.HemisphericLight("Ambient", new BABYLON.Vector3(0, 1, 0), scene);
+			ambient.intensity = 0.5;
+
 			// Skybox
-			var skybox = BABYLON.Mesh.CreateBox("skyBox", 100.0, scene);
-			var skyboxMaterial = new BABYLON.StandardMaterial("skyBox", scene);
+			var skybox = BABYLON.Mesh.CreateBox("skyBox", 1000.0, scene);
+			var skyboxMaterial = new BABYLON.StandardMaterial("skyBoxMaterial", scene);
+			//var skyboxMaterial = new BABYLON.SkyMaterial("skyBoxMaterial", scene);
+
 			skyboxMaterial.backFaceCulling = false;
-			skyboxMaterial.reflectionTexture = new BABYLON.CubeTexture("../../assets/skybox/skybox", scene);
+			skyboxMaterial.reflectionTexture = new BABYLON.CubeTexture("/playground/textures/skybox3", scene);
 			skyboxMaterial.reflectionTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
 			skyboxMaterial.diffuseColor = new BABYLON.Color3(0, 0, 0);
 			skyboxMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
 			skyboxMaterial.disableLighting = true;
+			
 			skybox.material = skyboxMaterial;
+
 			
+
 			// Ground
-			//var ground = BABYLON.Mesh.CreateGroundFromHeightMap("ground", "src/heightMap.png", 100, 100, 100, 0, 10, scene, false);
-			var ground = BABYLON.Mesh.CreateGround("ground", 512, 512, 32, scene, false);
-			ground.position.y = -1.05;
-		
-			var groundMaterial = new BABYLON.StandardMaterial("ground", scene);
-			groundMaterial.diffuseTexture = new BABYLON.Texture("src/ground.jpg", scene);
-			groundMaterial.diffuseTexture.uScale = 6;
-			groundMaterial.diffuseTexture.vScale = 6;
-			groundMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+			//var ground = BABYLON.Mesh.CreateGroundFromHeightMap("ground", "../assets/heightMap.png", 100, 100, 500, 0, 10, scene, false);
+			var ground = BABYLON.Mesh.CreateGround("ground", 512, 512, 0, scene, false);
+			ground.scaling = new BABYLON.Vector3(0.8, 0.8, 0.8);
+			//ground.position.y = -1.05;
 			
-			ground.material = groundMaterial;
-		
-			// water
-			var waterMesh = BABYLON.Mesh.CreateGround("waterMesh", 512, 512, 32, scene, false);
-			var water = new BABYLON.RaindropsMaterial("water", scene, new BABYLON.Vector2(512, 512));
-			water.backFaceCulling = true;
-		
-		
-			water.bumpTexture = new BABYLON.Texture("../assets/Raindrops_normal.bmp", scene);
-			water.raindropTexture = new BABYLON.Texture("../assets/Raindrops_normal.bmp", scene);
-			water.windForce = -5;
-			water.waveHeight = 0.2;
-			water.bumpHeight = 0.05;
-			water.waterColor = new BABYLON.Color3(0.015, 0.23, 0.39);
-			water.colorBlendFactor = 0.2;
-			water.addToRenderList(skybox);
-			water.addToRenderList(ground);
+			// Raindrop material
+			var raindropsMaterial = new BABYLON.RaindropsMaterial("raindropsMaterial", scene);
+			var groundTextureUVScale = 3.0;
 			
-			waterMesh.material = water;
-		
-			// --------------------- normal particle system ---------------------------------
-		
+			raindropsMaterial.diffuseTexture = new BABYLON.Texture("../assets/Raindrops_base.bmp", scene); 
+			raindropsMaterial.diffuseTexture.uScale = groundTextureUVScale;
+			raindropsMaterial.diffuseTexture.vScale = groundTextureUVScale;
+			raindropsMaterial.backFaceCulling = false;
+			raindropsMaterial.raindropTexture = new BABYLON.Texture("../assets/Raindrops_normal.bmp", scene); 
+			raindropsMaterial.raindropTexture.uScale = 1.0;
+			raindropsMaterial.raindropTexture.vScale = 1.0;
+			raindropsMaterial.raindropGroundHeightTexture = new BABYLON.Texture("../assets/Raindrops_height.bmp", scene); 
+			raindropsMaterial.raindropGroundHeightTexture.uScale = groundTextureUVScale;
+			raindropsMaterial.raindropGroundHeightTexture.vScale = groundTextureUVScale;
+			raindropsMaterial.raindropGroundNormalTexture = new BABYLON.Texture("../assets/Raindrops_groundNormal.jpg", scene); 
+			raindropsMaterial.raindropGroundNormalTexture.uScale = groundTextureUVScale;
+			raindropsMaterial.raindropGroundNormalTexture.vScale = groundTextureUVScale;
+			raindropsMaterial.raindropWaterNormalTexture = new BABYLON.Texture("../assets/Raindrops_waterNormal.bmp", scene);
+			raindropsMaterial.raindropSpeed = 35.0;
+			raindropsMaterial.addToRenderList(skybox);
+
+			ground.material = raindropsMaterial;
+			
+
+
+			// Raindrop particles
 			// Emitters
 			var emitter0 = BABYLON.Mesh.CreateBox("emitter0", 0.1, scene);
 			emitter0.isVisible = false;
-			emitter0.position.y = 25.0;
-		
+			emitter0.position.y = 100.0;
+
 			// Particles
-			var particleSystem = new BABYLON.ParticleSystem("particles", 10000, scene);
+			var particleSystem = new BABYLON.ParticleSystem("particles", 5000, scene);
 			particleSystem.particleTexture = new BABYLON.Texture("../../assets/rain.jpg", scene);
 			particleSystem.minAngularSpeed = 0;
 			particleSystem.maxAngularSpeed = 0;
-			particleSystem.minSize = 5;
-			particleSystem.maxSize = 5;
+			particleSystem.minSize = 15;
+			particleSystem.maxSize = 18;
 			particleSystem.minLifeTime = 2.0;
 			particleSystem.maxLifeTime = 2.0;
 			particleSystem.minEmitPower = 3.0;
-			particleSystem.maxEmitPower = 5.0;
-			particleSystem.updateSpeed = 0.03;
+			particleSystem.maxEmitPower = 3.0;
+			particleSystem.updateSpeed = 0.01;
 			particleSystem.emitter = emitter0;
-			particleSystem.emitRate = 1200;
+			particleSystem.emitRate = 2000;
 			particleSystem.blendMode = BABYLON.ParticleSystem.BLENDMODE_ONEONE;
 			
-			particleSystem.minEmitBox = new BABYLON.Vector3(-50, 0, -50);
-			particleSystem.maxEmitBox = new BABYLON.Vector3(50, 0, 50);
+			particleSystem.minEmitBox = new BABYLON.Vector3(-250, 0, -250);
+			particleSystem.maxEmitBox = new BABYLON.Vector3(250, 0, 250);
 			particleSystem.direction1 = new BABYLON.Vector3(0, -1, 0);
 			particleSystem.direction2 = new BABYLON.Vector3(0, -1, 0);
-			particleSystem.color1 = new BABYLON.Color4(0.2, 0.2, 0.2, 0.6);
-			particleSystem.color2 = new BABYLON.Color4(0.2, 0.2, 0.2, 0.6);
-			particleSystem.colorDead = new BABYLON.Color4(0.2, 0.2, 0.2, 0.2);
-			particleSystem.gravity = new BABYLON.Vector3(0, -80.0, 0);
-		
+			particleSystem.color1 = new BABYLON.Color4(0.6, 0.6, 0.6, 0.8);
+			particleSystem.color2 = new BABYLON.Color4(0.6, 0.6, 0.6, 0.8);
+			particleSystem.colorDead = new BABYLON.Color4(0.2, 0.2, 0.2, 0.3);
+			particleSystem.gravity = new BABYLON.Vector3(0, -50.0, 0);
 			particleSystem.start();
 			
+
+			// water splash particles
+			// Emitters
+			var emitter1 = BABYLON.Mesh.CreateBox("emitter1", 1.0, scene);
+			emitter1.isVisible = false;
+			emitter1.position.y = 0.5;
+
 			// particle 2 
-			// var particleSystem2 = new BABYLON.ParticleSystem("particles2", 5000, scene, null, true);
-			// particleSystem2.particleTexture = new BABYLON.Texture("../../assets/rain_flare.bmp", scene, true, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
-			// particleSystem2.startSpriteCellID = 0;
-			// particleSystem2.endSpriteCellID = 3;
-			// particleSystem2.spriteCellHeight = 32;
-			// particleSystem2.spriteCellWidth = 32;
-			// particleSystem2.spriteCellLoop = true;
-			// particleSystem2.spriteCellChangeSpeed = 1; // default is zero
-			// particleSystem2.minEmitPower = 1.0;
-			// particleSystem2.maxEmitPower = 1.0;
-			// particleSystem2.emitRate = 2000;
-			// particleSystem2.updateSpeed = 0.01;
-			// particleSystem2.minLifeTime = 0.05;
-			// particleSystem2.maxLifeTime = 0.05;
-			// particleSystem2.minSize = 0.25;
-			// particleSystem2.maxSize = 0.25;
-			// particleSystem2.gravity = new BABYLON.Vector3(0, 0, 0);
-			// particleSystem2.direction1 = new BABYLON.Vector3(0, 0, 0);
-			// particleSystem2.direction2 = new BABYLON.Vector3(0, 0, 0);
-			// particleSystem2.minEmitBox = new BABYLON.Vector3(-50, 0, -50);
-			// particleSystem2.maxEmitBox = new BABYLON.Vector3(50, 0, 50);
-			// particleSystem2.color1 = new BABYLON.Color4(0.1, 0.1, 0.1, 0.3);
-			// particleSystem2.color2 = new BABYLON.Color4(0.1, 0.1, 0.1, 0.3);
-			// particleSystem2.colorDead = new BABYLON.Color4(0.1, 0.1, 0.1, 0.3);
+			var particleSystem2 = new BABYLON.ParticleSystem("particles2", 5000, scene, null, true);
+			particleSystem2.particleTexture = new BABYLON.Texture("../../assets/rain_flake.bmp", scene, true, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
+			particleSystem2.startSpriteCellID = 0;
+			particleSystem2.endSpriteCellID = 4;
+			particleSystem2.spriteCellHeight = 64;
+			particleSystem2.spriteCellWidth = 64;
+			particleSystem2.spriteCellLoop = true;
+			particleSystem2.spriteCellChangeSpeed = 1; // default is zero
+			particleSystem2.minEmitPower = 1.0;
+			particleSystem2.maxEmitPower = 1.0;
+			particleSystem2.emitter = emitter1;
+			particleSystem2.emitRate = 2000;
+			particleSystem2.blendMode = BABYLON.ParticleSystem.BLENDMODE_ONEONE;
+			particleSystem2.updateSpeed = 0.05;
+			particleSystem2.minLifeTime = 0.2;
+			particleSystem2.maxLifeTime = 0.2;
+			particleSystem2.minSize = 1.8;
+			particleSystem2.maxSize = 1.2;
+			particleSystem2.gravity = new BABYLON.Vector3(0, 0, 0);
+			particleSystem2.direction1 = new BABYLON.Vector3(0, 0, 0);
+			particleSystem2.direction2 = new BABYLON.Vector3(0, 0, 0);
+			particleSystem2.minEmitBox = new BABYLON.Vector3(-250, 0, -250);
+			particleSystem2.maxEmitBox = new BABYLON.Vector3(250, 0, 250);
+			particleSystem2.color1 = new BABYLON.Color4(0.1, 0.1, 0.1, 0.5);
+			particleSystem2.color2 = new BABYLON.Color4(0.1, 0.1, 0.1, 0.5);
+			particleSystem2.colorDead = new BABYLON.Color4(0.1, 0.1, 0.1, 0.5);
+			particleSystem2.start();
 
-
-			//particleSystem2.start();
 
 			// Rain Ambient Sound
 			var rainMusic = new BABYLON.Sound("Music", "../../assets/rain_nature2.wav", scene, null, { loop: true, autoplay: true });
 			rainMusic.setVolume(0.5);
-
-
-			var camera = new BABYLON.ArcRotateCamera("Camera", Math.PI / 2, Math.PI / 6, 1.5, BABYLON.Vector3.Zero(), scene);
-			camera.attachControl(canvas, true);
-			camera.minZ = 0.1;
-			
 
 
 			// Register a render loop to repeatedly render the scene
@@ -188,37 +197,118 @@
 				engine.resize();
 			});
 
-			//var aaPostProcess = new BABYLON.AsciiArtPostProcess("AsciiArt", camera);
-			//var drPostProcess = new BABYLON.DigitalRainPostProcess("AsciiArt", camera);
+			// Fog
+			scene.fogMode = BABYLON.Scene.FOGMODE_NONE;
+			//scene.fogMode = BABYLON.Scene.FOGMODE_EXP;
+			scene.fogDensity = 0.01;
+
+			// Post processing
 			
+			// bloom
+			var blurWidth = 10.0;
+			var postProcess0 = new BABYLON.PassPostProcess("Scene copy", 1.0, camera);
+			var postProcess1 = new BABYLON.PostProcess("Down sample", "../assets/postprocesses/downsample", ["screenSize", "highlightThreshold"], null, 0.25, camera, BABYLON.Texture.BILINEAR_SAMPLINGMODE);
+			postProcess1.onApply = function (effect) {
+				effect.setFloat2("screenSize", postProcess1.width, postProcess1.height);
+				effect.setFloat("highlightThreshold", 0.95);
+			};
+			var postProcess2 = new BABYLON.BlurPostProcess("Horizontal blur", new BABYLON.Vector2(1.0, 0), blurWidth, 0.25, camera);
+			var postProcess3 = new BABYLON.BlurPostProcess("Vertical blur", new BABYLON.Vector2(0, 1.0), blurWidth, 0.25, camera);
+			var postProcess4 = new BABYLON.PostProcess("Final compose", "../assets/postprocesses/compose", ["sceneIntensity", "glowIntensity", "highlightIntensity"], ["sceneSampler"], 1, camera);
+			postProcess4.onApply = function (effect) {
+				effect.setTextureFromPostProcess("sceneSampler", postProcess0);
+				effect.setFloat("sceneIntensity", 0.5);
+				effect.setFloat("glowIntensity", 0.4);
+				effect.setFloat("highlightIntensity", 1.0);
+			};
 
-			var abPostProcess = new BABYLON.rainPostProcess("rain",1.0, camera);
-            var aaPostProcess = new BABYLON.frostPostProcess("frost","frost3.jpg", 1.0, camera);
+			// weather post processing
+			var rainPostProcess = new BABYLON.rainPostProcess("rain",1.0, camera);
+            var frostPostProcess = new BABYLON.frostPostProcess("frost","frost3.jpg", 1.0, camera);
 
 
-			//camera.detachPostProcess(aaPostProcess);
-			//camera.detachPostProcess(drPostProcess);
 
-			//var gui = new dat.GUI();
-			//var options = {
-			//	postProcess: "asciiArt"
-			//}
+			// // Debug GUI (affected by post processing)
+			// var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+			// advancedTexture.idealHeight = 1100;
 
-			//  gui.add(options, 'postProcess', ['asciiArt', 'digitalRain']).onFinishChange(function () {
-				
-			// 	switch (options.postProcess) {
-			// 		case "asciiArt":
-			// 			camera.detachPostProcess(aaPostProcess);
-			// 			camera.detachPostProcess(drPostProcess);
-			// 			camera.attachPostProcess(aaPostProcess);
-			// 			break;
-			// 		case "digitalRain":
-			// 			camera.detachPostProcess(aaPostProcess);
-			// 			camera.detachPostProcess(drPostProcess);
-			// 			camera.attachPostProcess(drPostProcess);
-			// 			break;
+			// var panel = new BABYLON.GUI.StackPanel();
+			// panel.width = "300px";
+			// panel.isVertical = true;
+			// panel.paddingRight = "20px";
+			// panel.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+			// panel.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+			// panel.fontSize = 16;
+			// advancedTexture.addControl(panel);
+
+			// var getPropertyPath = function(property) {
+			// 	return raindropsMaterial[property];
+			// }
+
+			// var setPropertyPath = function(property, value) {
+			// 	raindropsMaterial[property] = value;
+			// }    
+
+			// var addSlider = function(text, property, min, max, left, panel, top) {
+			// 	var topPanel = new BABYLON.GUI.StackPanel();        
+			// 	topPanel.height = "30px";
+			// 	topPanel.isVertical = false;
+			// 	panel.addControl(topPanel);    
+
+			// 	var header = new BABYLON.GUI.TextBlock();
+			// 	header.text = text;
+			// 	header.width = "150px";
+			// 	header.color = "white";
+			// 	header.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+			// 	topPanel.addControl(header); 
+			// 	if (left) {
+			// 		header.left = left;
 			// 	}
-			// });
+
+			// 	var valueHeader = new BABYLON.GUI.TextBlock();
+			// 	valueHeader.text = getPropertyPath(property).toFixed(2);
+			// 	valueHeader.width = "100px";
+			// 	valueHeader.color = "white";
+			// 	valueHeader.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+			// 	topPanel.addControl(valueHeader);            
+
+			// 	var slider = new BABYLON.GUI.Slider();
+			// 	slider.minimum = min;
+			// 	slider.maximum = max;
+			// 	slider.height = "20px";
+			// 	slider.color = "green";
+			// 	slider.background = "white";
+			// 	slider.onSync = function() {
+			// 		slider.value = getPropertyPath(property);
+			// 	}
+			// 	slider.onSync();
+			// 	slider.onValueChangedObservable.add(function(value) {
+			// 		valueHeader.text = value.toFixed(2);
+			// 		setPropertyPath(property, value);
+			// 	});
+
+			// 	if (left) {
+			// 		slider.paddingLeft = left;
+			// 	}
+
+			// 	panel.addControl(slider);  
+			// 	return slider;
+			// }
+
+
+			// var addSeparator = function(panel) {
+			// 	var rectangle = new BABYLON.GUI.Rectangle();
+			// 	rectangle.height = "15px";
+			// 	rectangle.thickness = 0;
+			// 	panel.addControl(rectangle); 
+			// }
+
+			// addSlider("raindrop speed :", "raindropSpeed", 20.0, 50.0, "20px", panel);
+			// addSeparator(panel);
+			// addSlider("puddle amount :", "raindropPuddleAmount", 0.0, 6.0, "20px", panel); 
+			// addSeparator(panel);
+
+
 		}
 	});
 
