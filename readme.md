@@ -66,7 +66,7 @@ Extension of post processing library
 
   Here are some renders after each phase:
 
-  ![](img/3_original.jpg) |  ![](img/4_kuwahara + paper.jpg) |  ![](img/6_edge.jpg)
+  ![](img/3_original.jpg) |  ![](img/4_kuwaharaAndPaper.jpg) |  ![](img/6_edge.jpg)
   ------------ | ------------- | -------------
   original render | Kuwahara & paper effect | edge detection
 
