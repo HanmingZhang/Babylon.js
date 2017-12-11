@@ -49,6 +49,8 @@ declare module BABYLON {
         protected _globalAmbientColor: Color3;
         raindropPuddleAmount: number;
         raindropSpeed: number;
+        raindropSize: number;
+        raindropRippleNormalIntensity: number;
         private _mesh;
         private _reflectionRTT;
         private _reflectionTransform;
@@ -90,13 +92,22 @@ declare module BABYLON {
 declare module BABYLON {
     class snowMaterial extends PushMaterial {
         lastTime: number;
+        noiseStrength: number;
+        pushup: number;
+        snowlimit: number;
+        delay: number;
+        speed: number;
         mixTexture: BaseTexture;
+        private _diffuseTexture;
+        diffuseTexture: Nullable<BaseTexture>;
         private _diffuseTextureX;
         diffuseTextureX: BaseTexture;
         private _diffuseTextureY;
         diffuseTextureY: BaseTexture;
         private _diffuseTextureZ;
         diffuseTextureZ: BaseTexture;
+        private _normalTexture;
+        normalTexture: BaseTexture;
         private _normalTextureX;
         normalTextureX: BaseTexture;
         private _normalTextureY;
@@ -566,6 +577,49 @@ declare module BABYLON {
         serialize(): any;
         getClassName(): string;
         static Parse(source: any, scene: Scene, rootUrl: string): SkyMaterial;
+    }
+}
+
+
+declare module BABYLON {
+    class anotherSkyMaterial extends PushMaterial {
+        lastTime: number;
+        timeScale: number;
+        cloudScale: number;
+        cover: number;
+        softness: number;
+        brightness: number;
+        noiseOctaves: number;
+        curlStrain: number;
+        skyTime: number;
+        luminance: number;
+        turbidity: number;
+        rayleigh: number;
+        mieCoefficient: number;
+        turbidity2: number;
+        rayleigh2: number;
+        mieCoefficient2: number;
+        mieDirectionalG: number;
+        distance: number;
+        inclination: number;
+        azimuth: number;
+        sunPosition: Vector3;
+        useSunPosition: boolean;
+        mixTexture: BaseTexture;
+        private _cameraPosition;
+        private _renderId;
+        constructor(name: string, scene: Scene);
+        needAlphaBlending(): boolean;
+        needAlphaTesting(): boolean;
+        getAlphaTestTexture(): Nullable<BaseTexture>;
+        isReadyForSubMesh(mesh: AbstractMesh, subMesh: SubMesh, useInstances?: boolean): boolean;
+        bindForSubMesh(world: Matrix, mesh: Mesh, subMesh: SubMesh): void;
+        getAnimatables(): IAnimatable[];
+        dispose(forceDisposeEffect?: boolean): void;
+        clone(name: string): anotherSkyMaterial;
+        serialize(): any;
+        getClassName(): string;
+        static Parse(source: any, scene: Scene, rootUrl: string): anotherSkyMaterial;
     }
 }
 

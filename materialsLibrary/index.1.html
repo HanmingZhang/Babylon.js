@@ -102,22 +102,23 @@
 			var raindropsMaterial = new BABYLON.RaindropsMaterial("raindropsMaterial", scene);
 
 			var groundTextureUVScale = 3.0;
-			
+			var sizeScaling = 1.0;
+
 			raindropsMaterial.diffuseTexture = new BABYLON.Texture("../assets/Raindrops_base.bmp", scene); 
-			raindropsMaterial.diffuseTexture.uScale = groundTextureUVScale;
+			raindropsMaterial.diffuseTexture.uScale = groundTextureUVScale * sizeScaling;
 			raindropsMaterial.diffuseTexture.vScale = groundTextureUVScale;
 			raindropsMaterial.backFaceCulling = false;
 
 			raindropsMaterial.raindropTexture = new BABYLON.Texture("../assets/Raindrops_normal.bmp", scene); 
-			raindropsMaterial.raindropTexture.uScale = 1.0;
+			raindropsMaterial.raindropTexture.uScale = 1.0 * sizeScaling;
 			raindropsMaterial.raindropTexture.vScale = 1.0;
 
 			raindropsMaterial.raindropGroundHeightTexture = new BABYLON.Texture("../assets/Raindrops_height.bmp", scene); 
-			raindropsMaterial.raindropGroundHeightTexture.uScale = groundTextureUVScale;
+			raindropsMaterial.raindropGroundHeightTexture.uScale = groundTextureUVScale * sizeScaling;
 			raindropsMaterial.raindropGroundHeightTexture.vScale = groundTextureUVScale;
 
 			raindropsMaterial.raindropGroundNormalTexture = new BABYLON.Texture("../assets/Raindrops_groundNormal.jpg", scene); 
-			raindropsMaterial.raindropGroundNormalTexture.uScale = groundTextureUVScale;
+			raindropsMaterial.raindropGroundNormalTexture.uScale = groundTextureUVScale * sizeScaling;
 			raindropsMaterial.raindropGroundNormalTexture.vScale = groundTextureUVScale;
 
 			raindropsMaterial.raindropWaterNormalTexture = new BABYLON.Texture("../assets/Raindrops_waterNormal.bmp", scene);
@@ -223,7 +224,8 @@
 			addSeparator(panel);
 			addSlider("puddle amount :", "raindropPuddleAmount", 0.0, 6.0, "20px", panel); 
 			addSeparator(panel);
-
+			addSlider("ripple intensity :", "raindropRippleNormalIntensity", 0.0, 3.0, "20px", panel); 
+			addSeparator(panel);
 
 		}
 	});

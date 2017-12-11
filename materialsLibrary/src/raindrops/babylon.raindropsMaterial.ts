@@ -18,6 +18,7 @@ module BABYLON {
          public VERTEXCOLOR = false;
          public VERTEXALPHA = false;
          public NUM_BONE_INFLUENCERS = 0;
+
          public BonesPerMesh = 0;
          public LOGARITHMICDEPTH = false;
          
@@ -57,7 +58,6 @@ module BABYLON {
          @expandToProperty("_markAllSubMeshesAsTexturesDirty")
          public raindropWaterNormalTexture: BaseTexture;
 
-
          @serializeAsColor3("ambient")
          public ambientColor = new Color3(0, 0, 0);
  
@@ -95,6 +95,8 @@ module BABYLON {
 		*/
         public raindropPuddleAmount: number = 2.0;
         public raindropSpeed: number = 25.0;
+        public raindropSize: number = 10.0;
+        public raindropRippleNormalIntensity: number = 1.0;
 
         /*
 		* Private members
@@ -362,7 +364,7 @@ module BABYLON {
                      "logarithmicDepthConstant",
                      
                      // Raindrop
-                     "worldReflectionViewProjection", "raindropPuddleAmount", "raindropSpeed", "time"
+                     "worldReflectionViewProjection", "raindropPuddleAmount", "raindropSpeed", "raindropSize", "raindropRippleNormalIntensity", "time"
                  ];
  
                  var samplers = ["diffuseSampler", "raindropSampler", "reflectionSampler", "groundHeightSampler", "groundNormalSampler", "waterNormalSampler"]
@@ -423,14 +425,12 @@ module BABYLON {
              this.bindOnlyWorldMatrix(world);
              this._activeEffect.setMatrix("viewProjection", scene.getTransformMatrix());
             
-             //let mustRebind = this._mustRebind(scene, effect, mesh.visibility);
              let mustRebind = this._mustRebind(scene, effect);
              
              // Bones
              MaterialHelper.BindBonesParameters(mesh, this._activeEffect);
              
              if (mustRebind) {
-                
                 // Textures        
                 if (this.diffuseTexture && StandardMaterial.DiffuseTextureEnabled) {
                     effect.setTexture("diffuseSampler", this.diffuseTexture);
@@ -512,6 +512,8 @@ module BABYLON {
             effect.setFloat("time", this._lastTime / 100000);
             effect.setFloat("raindropPuddleAmount", this.raindropPuddleAmount);
             effect.setFloat("raindropSpeed", this.raindropSpeed);
+            effect.setFloat("raindropSize", this.raindropSize);
+            effect.setFloat("raindropRippleNormalIntensity", this.raindropRippleNormalIntensity);
 
             this._afterBind(mesh, this._activeEffect);
          }

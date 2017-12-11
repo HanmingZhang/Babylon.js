@@ -5,11 +5,15 @@ module BABYLON {
         public DIFFUSEX = false;
         public DIFFUSEY = false;
         public DIFFUSEZ = false;
-        public DIFFUSENOISE = true;
+        public DIFFUSENOISE = false;
+        public DIFFUSE = false;
+
+        public PUSHUP = false;
         
         public BUMPX = false;
         public BUMPY = false;
         public BUMPZ = false;
+        public BUMP = false;
         
         public CLIPPLANE = false;
         public ALPHATEST = true;
@@ -24,6 +28,9 @@ module BABYLON {
         public BonesPerMesh = 0;
         public INSTANCES = false;
 
+        public UV1 = false;
+        
+
         constructor() {
             super();
             this.rebuild();
@@ -32,10 +39,21 @@ module BABYLON {
 
     export class snowMaterial extends PushMaterial {
         public lastTime: number = 0;
+        public noiseStrength: number = 1;
+        public pushup: number = 1;
+
+        public snowlimit: number = 6.0;
+        public delay: number = 0.0;
+        public speed: number = 1.0;
 
         @serializeAsTexture()
         public mixTexture: BaseTexture;
         //mixTexture.hasAlpha = true;
+
+        @serializeAsTexture("diffuseTexture")
+        private _diffuseTexture: Nullable<BaseTexture>;
+        @expandToProperty("_markAllSubMeshesAsTexturesDirty")
+        public diffuseTexture: Nullable<BaseTexture>;   
         
         @serializeAsTexture("diffuseTextureX")
         private _diffuseTextureX: BaseTexture;
@@ -50,7 +68,12 @@ module BABYLON {
         @serializeAsTexture("diffuseTextureZ")
         private _diffuseTextureZ: BaseTexture;
         @expandToProperty("_markAllSubMeshesAsTexturesDirty")
-        public diffuseTextureZ: BaseTexture;        
+        public diffuseTextureZ: BaseTexture;   
+        
+        @serializeAsTexture("normalTexture")
+        private _normalTexture: BaseTexture;
+        @expandToProperty("_markAllSubMeshesAsTexturesDirty")
+        public normalTexture: BaseTexture;  
         
         @serializeAsTexture("normalTextureX")
         private _normalTextureX: BaseTexture;
@@ -116,7 +139,8 @@ module BABYLON {
         }
 
         // Methods   
-        public isReadyForSubMesh(mesh: AbstractMesh, subMesh: SubMesh, useInstances?: boolean): boolean {   
+        public isReadyForSubMesh(mesh: AbstractMesh, subMesh: SubMesh, useInstances?: boolean): boolean {  
+
             if (this.isFrozen) {
                 if (this._wasPreviouslyReady && subMesh.effect) {
                     return true;
@@ -129,6 +153,13 @@ module BABYLON {
 
             var defines = <snowMaterialDefines>subMesh._materialDefines;
             var scene = this.getScene();
+            
+            if(this.pushup) {
+                (<any>defines)["PUSHUP"] = true;
+            }
+            else{
+                (<any>defines)["PUSHUP"] = false;
+            }
 
             if (!this.checkReadyOnEveryCall && subMesh.effect) {
                 if (this._renderId === scene.getRenderId()) {
@@ -141,6 +172,15 @@ module BABYLON {
             // Textures
             if (defines._areTexturesDirty) {                
                 if (scene.texturesEnabled) {
+                    defines._needUVs = false;
+                    if (this._diffuseTexture && StandardMaterial.DiffuseTextureEnabled) {
+                        if (!this._diffuseTexture.isReady()) {
+                            return false;
+                        } else {
+                            defines._needUVs = true;
+                            defines.DIFFUSE = true;
+                        }
+                    } 
                     if (StandardMaterial.DiffuseTextureEnabled) {
                         var textures = [this.diffuseTextureX, this.diffuseTextureY, this.diffuseTextureZ, this.perlinNoiseTexture];
                         var textureDefines = ["DIFFUSEX", "DIFFUSEY", "DIFFUSEZ", "DIFFUSENOISE"];
@@ -156,8 +196,8 @@ module BABYLON {
                         }
                     }
                     if (StandardMaterial.BumpTextureEnabled) {
-                        var textures = [this.normalTextureX, this.normalTextureY, this.normalTextureZ];
-                        var textureDefines = ["BUMPX", "BUMPY", "BUMPZ"];
+                        var textures = [this.normalTextureX, this.normalTextureY, this.normalTextureZ, this.normalTexture];
+                        var textureDefines = ["BUMPX", "BUMPY", "BUMPZ", "BUMP"];
                         
                         for (var i=0; i < textures.length; i++) {
                             if (textures[i]) {
@@ -204,6 +244,10 @@ module BABYLON {
                 //Attributes
                 var attribs = [VertexBuffer.PositionKind];
 
+                if (defines.UV1) {
+                    attribs.push(VertexBuffer.UVKind);
+                }
+
                 if (defines.NORMAL) {
                     attribs.push(VertexBuffer.NormalKind);
                 }
@@ -224,10 +268,12 @@ module BABYLON {
                     "vClipPlane",
                     "tileSize",
                     "noiseSize",
+                    "noiseStrength",
                     "time"
                 ];
                 var samplers = ["diffuseSamplerX", "diffuseSamplerY", "diffuseSamplerZ", "perlinNoiseSampler",
-                    "normalSamplerX", "normalSamplerY", "normalSamplerZ"
+                    "normalSamplerX", "normalSamplerY", "normalSamplerZ",
+                    "diffuseSampler", "normalSampler"
                 ];
 
                 var uniformBuffers = new Array<string>()
@@ -308,9 +354,16 @@ module BABYLON {
                 if (this.normalTextureZ) {
                     this._activeEffect.setTexture("normalSamplerZ", this.normalTextureZ);
                 }
+                if (this.normalTexture) {
+                    this._activeEffect.setTexture("normalSampler", this.normalTexture);
+                }
                 if (this.perlinNoiseTexture) {
                     this._activeEffect.setTexture("perlinNoiseSampler", this.perlinNoiseTexture);
                 }
+                if (this.diffuseTexture) {
+                    this._activeEffect.setTexture("diffuseSampler", this.diffuseTexture);
+                }
+
                 // Clip plane
                 MaterialHelper.BindClipPlane(this._activeEffect, scene);
 
@@ -328,6 +381,7 @@ module BABYLON {
                 this._activeEffect.setColor4("vSpecularColor", this.specularColor, this.specularPower);
             }
 
+            //Lights
             if (scene.lightsEnabled && !this.disableLighting) {
                 MaterialHelper.BindLights(scene, mesh, this._activeEffect, defines, this.maxSimultaneousLights);
             }
@@ -343,8 +397,20 @@ module BABYLON {
             this._afterBind(mesh, this._activeEffect);
 
             // Time
-            this.lastTime += scene.getEngine().getDeltaTime();
-            this._activeEffect.setFloat("time", this.lastTime);
+            this.lastTime += scene.getEngine().getDeltaTime() * this.speed;
+            if(this.lastTime < 0.0)
+            {
+                this._activeEffect.setFloat("time", 0.0);
+            }
+            else if(this.lastTime > this.snowlimit*10000.0)
+            {
+                this._activeEffect.setFloat("time", this.snowlimit);
+            }
+            else
+            {
+                this._activeEffect.setFloat("time", this.lastTime/10000.0);
+            }
+            this._activeEffect.setFloat("noiseStrength", this.noiseStrength);
         }
 
         public getAnimatables(): IAnimatable[] {
@@ -384,8 +450,16 @@ module BABYLON {
                 activeTextures.push(this._normalTextureZ);
             }
 
+            if (this._normalTexture) {
+                activeTextures.push(this._normalTexture);
+            }
+
             if (this._perlinNoiseTexture) {
                 activeTextures.push(this._perlinNoiseTexture);
+            }
+
+            if (this._diffuseTexture) {
+                activeTextures.push(this._diffuseTexture);
             }
             
             return activeTextures;
@@ -420,9 +494,17 @@ module BABYLON {
                 return true;
             } 
 
+            if (this._normalTexture === texture) {
+                return true;
+            } 
+
             if (this._perlinNoiseTexture === texture) {
                 return true;
             } 
+
+            if (this._diffuseTexture === texture) {
+                return true;
+            }
 
             return false;    
         }        

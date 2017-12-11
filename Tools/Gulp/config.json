@@ -1306,6 +1306,16 @@
             },
             {
                 "files": [
+                    "../../materialsLibrary/src/anotherSky/babylon.anotherSkyMaterial.ts"
+                ],
+                "shaderFiles": [
+                    "../../materialsLibrary/src/anotherSky/anotherSky.vertex.fx",
+                    "../../materialsLibrary/src/anotherSky/anotherSky.fragment.fx"
+                ],
+                "output": "babylon.anotherSkyMaterial.js"
+            },
+            {
+                "files": [
                     "../../materialsLibrary/src/grid/babylon.gridmaterial.ts"
                 ],
                 "shaderFiles": [

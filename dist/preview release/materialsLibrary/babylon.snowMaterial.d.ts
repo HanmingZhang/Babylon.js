@@ -2,13 +2,22 @@
 declare module BABYLON {
     class snowMaterial extends PushMaterial {
         lastTime: number;
+        noiseStrength: number;
+        pushup: number;
+        snowlimit: number;
+        delay: number;
+        speed: number;
         mixTexture: BaseTexture;
+        private _diffuseTexture;
+        diffuseTexture: Nullable<BaseTexture>;
         private _diffuseTextureX;
         diffuseTextureX: BaseTexture;
         private _diffuseTextureY;
         diffuseTextureY: BaseTexture;
         private _diffuseTextureZ;
         diffuseTextureZ: BaseTexture;
+        private _normalTexture;
+        normalTexture: BaseTexture;
         private _normalTextureX;
         normalTextureX: BaseTexture;
         private _normalTextureY;

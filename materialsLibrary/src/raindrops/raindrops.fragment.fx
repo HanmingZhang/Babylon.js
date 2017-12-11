@@ -71,7 +71,8 @@ uniform float time;
 
 uniform float raindropPuddleAmount;
 uniform float raindropSpeed;
-
+uniform float raindropSize;
+uniform float raindropRippleNormalIntensity;
 
 
 // For raindrop ripple effect
@@ -123,15 +124,13 @@ void main(void) {
 
 
     // -------------- FlipBook Effect ------------------
-    // TODO : extract this as parameter
     // default 25.0
     // larger -> faster
     float raindropsTimeScale = raindropSpeed;
 
-    // TODO : extract this as parameter
     // smaller -> less ripples but larger size
     // larger  -> more ripples but smaller size
-    float raindropsUVScale = 2.0;
+    float raindropsUVScale = 12.0 - min(max(2.0, raindropSize), 10.0);
 
     vec2 inputUV = vec2(1.0 - vRaindropUV.x, vRaindropUV.y);
 
@@ -139,10 +138,8 @@ void main(void) {
     // 8.0 are fixed number by our texture
     vec4 raindropsNormal = flipBookEffect(raindropsTimeScale * time, 8.0, 8.0, fract(raindropsUVScale * inputUV));
 
-    // TODO : extract this as parameter
-    float raindropsNormalIntensity = 5.0;
-    raindropsNormal.x *= raindropsNormalIntensity;
-    raindropsNormal.y *= raindropsNormalIntensity;
+    raindropsNormal.x *= 5.0;
+    raindropsNormal.y *= 5.0;
 
     // filpBook normal debug
     //vec4 color = vec4(raindropsNormal, alpha);
@@ -159,7 +156,6 @@ void main(void) {
     // only retrive red channel
     float noiseValue = texture2D(groundHeightSampler, puddleNoiseScale * (vRaindropGroundHeightUV)).r;
 
-    // TODO : extract this as parameter
     // default 2.0
     // 0.0 -> pure water
     // 6.0 -> pure ground
@@ -191,7 +187,11 @@ void main(void) {
 
     // blend raindrop and ground normal
     //normalW = blendAngleCorrectedNormals(normalW, normalize(raindropsNormal.rgb));
-    normalW = normalW + normalize(raindropsNormal.rgb);
+
+    // should between 0.0 - 3.0
+    // default value is 1.0
+    float raindropsNormalIntensity = raindropRippleNormalIntensity;
+    normalW = normalW + raindropsNormalIntensity * normalize(raindropsNormal.rgb);
     // remember to normalize after lerp
     normalW = normalize(normalW);
 

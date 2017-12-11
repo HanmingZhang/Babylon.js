@@ -17,6 +17,7 @@ attribute vec4 color;
 #endif
 
 uniform mat4 worldReflectionViewProjection;
+uniform mat4 view;
 uniform mat4 viewProjection;
 
 #include<helperFunctions>
@@ -61,6 +62,12 @@ varying vec2 vDiffuseUV;
 #if defined(BUMP)
 varying vec2 vBumpUV;
 #endif
+
+
+#ifdef POINTSIZE
+uniform float pointSize;
+#endif
+
 
 // Output
 varying vec3 vPositionW;
@@ -212,6 +219,12 @@ void main(void) {
 #endif
 
 #include<pointCloudVertex>
+
+	// Point size
+#ifdef POINTSIZE
+	gl_PointSize = pointSize;
+#endif
+
 
 #ifdef REFLECTION
 	// Water

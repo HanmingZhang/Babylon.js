@@ -24,10 +24,13 @@ var BABYLON;
             _this.DIFFUSEX = false;
             _this.DIFFUSEY = false;
             _this.DIFFUSEZ = false;
-            _this.DIFFUSENOISE = true;
+            _this.DIFFUSENOISE = false;
+            _this.DIFFUSE = false;
+            _this.PUSHUP = false;
             _this.BUMPX = false;
             _this.BUMPY = false;
             _this.BUMPZ = false;
+            _this.BUMP = false;
             _this.CLIPPLANE = false;
             _this.ALPHATEST = true;
             _this.DEPTHPREPASS = false;
@@ -40,6 +43,7 @@ var BABYLON;
             _this.NUM_BONE_INFLUENCERS = 0;
             _this.BonesPerMesh = 0;
             _this.INSTANCES = false;
+            _this.UV1 = false;
             _this.rebuild();
             return _this;
         }
@@ -50,6 +54,11 @@ var BABYLON;
         function snowMaterial(name, scene) {
             var _this = _super.call(this, name, scene) || this;
             _this.lastTime = 0;
+            _this.noiseStrength = 1;
+            _this.pushup = 1;
+            _this.snowlimit = 6.0;
+            _this.delay = 0.0;
+            _this.speed = 1.0;
             _this.tileSize = 1;
             _this.noiseSize = 25;
             _this.diffuseColor = new BABYLON.Color3(1, 1, 1);
@@ -80,6 +89,12 @@ var BABYLON;
             }
             var defines = subMesh._materialDefines;
             var scene = this.getScene();
+            if (this.pushup) {
+                defines["PUSHUP"] = true;
+            }
+            else {
+                defines["PUSHUP"] = false;
+            }
             if (!this.checkReadyOnEveryCall && subMesh.effect) {
                 if (this._renderId === scene.getRenderId()) {
                     return true;
@@ -89,6 +104,16 @@ var BABYLON;
             // Textures
             if (defines._areTexturesDirty) {
                 if (scene.texturesEnabled) {
+                    defines._needUVs = false;
+                    if (this._diffuseTexture && BABYLON.StandardMaterial.DiffuseTextureEnabled) {
+                        if (!this._diffuseTexture.isReady()) {
+                            return false;
+                        }
+                        else {
+                            defines._needUVs = true;
+                            defines.DIFFUSE = true;
+                        }
+                    }
                     if (BABYLON.StandardMaterial.DiffuseTextureEnabled) {
                         var textures = [this.diffuseTextureX, this.diffuseTextureY, this.diffuseTextureZ, this.perlinNoiseTexture];
                         var textureDefines = ["DIFFUSEX", "DIFFUSEY", "DIFFUSEZ", "DIFFUSENOISE"];
@@ -104,8 +129,8 @@ var BABYLON;
                         }
                     }
                     if (BABYLON.StandardMaterial.BumpTextureEnabled) {
-                        var textures = [this.normalTextureX, this.normalTextureY, this.normalTextureZ];
-                        var textureDefines = ["BUMPX", "BUMPY", "BUMPZ"];
+                        var textures = [this.normalTextureX, this.normalTextureY, this.normalTextureZ, this.normalTexture];
+                        var textureDefines = ["BUMPX", "BUMPY", "BUMPZ", "BUMP"];
                         for (var i = 0; i < textures.length; i++) {
                             if (textures[i]) {
                                 if (!textures[i].isReady()) {
@@ -142,6 +167,9 @@ var BABYLON;
                 }
                 //Attributes
                 var attribs = [BABYLON.VertexBuffer.PositionKind];
+                if (defines.UV1) {
+                    attribs.push(BABYLON.VertexBuffer.UVKind);
+                }
                 if (defines.NORMAL) {
                     attribs.push(BABYLON.VertexBuffer.NormalKind);
                 }
@@ -159,10 +187,12 @@ var BABYLON;
                     "vClipPlane",
                     "tileSize",
                     "noiseSize",
+                    "noiseStrength",
                     "time"
                 ];
                 var samplers = ["diffuseSamplerX", "diffuseSamplerY", "diffuseSamplerZ", "perlinNoiseSampler",
-                    "normalSamplerX", "normalSamplerY", "normalSamplerZ"
+                    "normalSamplerX", "normalSamplerY", "normalSamplerZ",
+                    "diffuseSampler", "normalSampler"
                 ];
                 var uniformBuffers = new Array();
                 BABYLON.MaterialHelper.PrepareUniformsAndSamplersList({
@@ -229,8 +259,14 @@ var BABYLON;
                 if (this.normalTextureZ) {
                     this._activeEffect.setTexture("normalSamplerZ", this.normalTextureZ);
                 }
+                if (this.normalTexture) {
+                    this._activeEffect.setTexture("normalSampler", this.normalTexture);
+                }
                 if (this.perlinNoiseTexture) {
                     this._activeEffect.setTexture("perlinNoiseSampler", this.perlinNoiseTexture);
+                }
+                if (this.diffuseTexture) {
+                    this._activeEffect.setTexture("diffuseSampler", this.diffuseTexture);
                 }
                 // Clip plane
                 BABYLON.MaterialHelper.BindClipPlane(this._activeEffect, scene);
@@ -244,6 +280,7 @@ var BABYLON;
             if (defines.SPECULARTERM) {
                 this._activeEffect.setColor4("vSpecularColor", this.specularColor, this.specularPower);
             }
+            //Lights
             if (scene.lightsEnabled && !this.disableLighting) {
                 BABYLON.MaterialHelper.BindLights(scene, mesh, this._activeEffect, defines, this.maxSimultaneousLights);
             }
@@ -255,8 +292,17 @@ var BABYLON;
             BABYLON.MaterialHelper.BindFogParameters(scene, mesh, this._activeEffect);
             this._afterBind(mesh, this._activeEffect);
             // Time
-            this.lastTime += scene.getEngine().getDeltaTime();
-            this._activeEffect.setFloat("time", this.lastTime);
+            this.lastTime += scene.getEngine().getDeltaTime() * this.speed;
+            if (this.lastTime < 0.0) {
+                this._activeEffect.setFloat("time", 0.0);
+            }
+            else if (this.lastTime > this.snowlimit * 10000.0) {
+                this._activeEffect.setFloat("time", this.snowlimit);
+            }
+            else {
+                this._activeEffect.setFloat("time", this.lastTime / 10000.0);
+            }
+            this._activeEffect.setFloat("noiseStrength", this.noiseStrength);
         };
         snowMaterial.prototype.getAnimatables = function () {
             var results = [];
@@ -285,8 +331,14 @@ var BABYLON;
             if (this._normalTextureZ) {
                 activeTextures.push(this._normalTextureZ);
             }
+            if (this._normalTexture) {
+                activeTextures.push(this._normalTexture);
+            }
             if (this._perlinNoiseTexture) {
                 activeTextures.push(this._perlinNoiseTexture);
+            }
+            if (this._diffuseTexture) {
+                activeTextures.push(this._diffuseTexture);
             }
             return activeTextures;
         };
@@ -312,7 +364,13 @@ var BABYLON;
             if (this._normalTextureZ === texture) {
                 return true;
             }
+            if (this._normalTexture === texture) {
+                return true;
+            }
             if (this._perlinNoiseTexture === texture) {
+                return true;
+            }
+            if (this._diffuseTexture === texture) {
                 return true;
             }
             return false;
@@ -343,6 +401,12 @@ var BABYLON;
             BABYLON.serializeAsTexture()
         ], snowMaterial.prototype, "mixTexture", void 0);
         __decorate([
+            BABYLON.serializeAsTexture("diffuseTexture")
+        ], snowMaterial.prototype, "_diffuseTexture", void 0);
+        __decorate([
+            BABYLON.expandToProperty("_markAllSubMeshesAsTexturesDirty")
+        ], snowMaterial.prototype, "diffuseTexture", void 0);
+        __decorate([
             BABYLON.serializeAsTexture("diffuseTextureX")
         ], snowMaterial.prototype, "_diffuseTextureX", void 0);
         __decorate([
@@ -360,6 +424,12 @@ var BABYLON;
         __decorate([
             BABYLON.expandToProperty("_markAllSubMeshesAsTexturesDirty")
         ], snowMaterial.prototype, "diffuseTextureZ", void 0);
+        __decorate([
+            BABYLON.serializeAsTexture("normalTexture")
+        ], snowMaterial.prototype, "_normalTexture", void 0);
+        __decorate([
+            BABYLON.expandToProperty("_markAllSubMeshesAsTexturesDirty")
+        ], snowMaterial.prototype, "normalTexture", void 0);
         __decorate([
             BABYLON.serializeAsTexture("normalTextureX")
         ], snowMaterial.prototype, "_normalTextureX", void 0);
@@ -418,5 +488,5 @@ var BABYLON;
 
 //# sourceMappingURL=babylon.snowMaterial.js.map
 
-BABYLON.Effect.ShadersStore['snowVertexShader'] = "precision highp float;\n\nattribute vec3 position;\n#ifdef NORMAL\nattribute vec3 normal;\n#endif\n#ifdef VERTEXCOLOR\nattribute vec4 color;\n#endif\n#include<bonesDeclaration>\n\n#include<instancesDeclaration>\nuniform mat4 view;\nuniform mat4 viewProjection;\n#ifdef DIFFUSEX\nvarying vec2 vTextureUVX;\n#endif\n#ifdef DIFFUSEY\nvarying vec2 vTextureUVY;\n#endif\n#ifdef DIFFUSEZ\nvarying vec2 vTextureUVZ;\n#endif\n#ifdef DIFFUSENOISE\nvarying vec2 vTextureUVN;\n#endif\nuniform float tileSize;\nuniform float noiseSize;\n#ifdef POINTSIZE\nuniform float pointSize;\n#endif\n\nvarying vec3 vPositionW;\n#ifdef NORMAL\nvarying mat3 tangentSpace;\n#endif\n#ifdef VERTEXCOLOR\nvarying vec4 vColor;\n#endif\n#include<clipPlaneVertexDeclaration>\n#include<fogVertexDeclaration>\n#include<__decl__lightFragment>[0..maxSimultaneousLights]\nuniform float time;\nvarying float finalnoise;\nvarying float normaly;\n\nfloat translationSpeed=0.0;\nfloat r(float n)\n{\nreturn fract(cos(n*89.42)*343.42);\n}\nvec2 r(vec2 n)\n{\nreturn vec2(r(n.x*23.62-300.0+n.y*34.35),r(n.x*45.13+256.0+n.y*38.89)); \n}\nfloat worley(vec2 n,float s)\n{\nfloat dis=1.0;\nfor(int x=-1; x<=1; x++)\n{\nfor(int y=-1; y<=1; y++)\n{\nvec2 p=floor(n/s)+vec2(x,y);\nfloat d=length(r(p)+vec2(x,y)-fract(n/s));\nif (dis>d)\ndis=d;\n}\n}\nreturn 1.0-dis;\n}\nvec3 hash33(vec3 p3)\n{\np3=fract(p3*vec3(0.1031,0.11369,0.13787));\np3+=dot(p3,p3.yxz+19.19);\nreturn -1.0+2.0*fract(vec3((p3.x+p3.y)*p3.z,(p3.x+p3.z)*p3.y,(p3.y+p3.z)*p3.x));\n}\nfloat perlinNoise(vec3 p)\n{\nvec3 pi=floor(p);\nvec3 pf=p-pi;\nvec3 w=pf*pf*(3.0-2.0*pf);\nreturn mix(\nmix(\nmix(\ndot(pf-vec3(0,0,0),hash33(pi+vec3(0,0,0))),\ndot(pf-vec3(1,0,0),hash33(pi+vec3(1,0,0))),\nw.x\n),\nmix(\ndot(pf-vec3(0,0,1),hash33(pi+vec3(0,0,1))),\ndot(pf-vec3(1,0,1),hash33(pi+vec3(1,0,1))),\nw.x\n),\nw.z\n),\nmix(\nmix(\ndot(pf-vec3(0,1,0),hash33(pi+vec3(0,1,0))),\ndot(pf-vec3(1,1,0),hash33(pi+vec3(1,1,0))),\nw.x\n),\nmix(\ndot(pf-vec3(0,1,1),hash33(pi+vec3(0,1,1))),\ndot(pf-vec3(1,1,1),hash33(pi+vec3(1,1,1))),\nw.x\n),\nw.z\n),\nw.y\n);\n}\nfloat zerotofive(float normaly)\n{\n\n\nreturn max(0.,normaly);\n}\nvoid main(void)\n{\n#include<instancesVertex>\n#include<bonesVertex>\nvec3 positionup=position-vec3(0.0,0.1,0.0);\n\nvec2 uv=vec2(position.x,position.z);\nfloat dis=(\n1.0+perlinNoise(vec3(uv/vec2(noiseSize,noiseSize),0.0)*8.0))\n*(1.0+(worley(uv,32.0)+ 0.5*worley(2.0*uv,32.0)+0.25*worley(4.0*uv,32.0))\n);\nfinalnoise=dis/10.0;\npositionup.y+=time/10000.0*zerotofive(normal.y)*finalnoise;\ngl_Position=viewProjection*finalWorld*vec4(positionup,1.0);\nvec4 worldPos=finalWorld*vec4(positionup,1.0);\nvPositionW=vec3(worldPos);\nnormaly=normal.y;\n#ifdef DIFFUSEX\nvTextureUVX=worldPos.zy/tileSize;\n#endif\n#ifdef DIFFUSEY\nvTextureUVY=worldPos.xz/tileSize;\n#endif\n#ifdef DIFFUSEZ\nvTextureUVZ=worldPos.xy/tileSize;\n#endif\n#ifdef DIFFUSENOISE\nvTextureUVN=worldPos.xz/(tileSize*5.);\n#endif\n#ifdef NORMAL\n\nvec3 xtan=vec3(0,0,1);\nvec3 xbin=vec3(0,1,0);\nvec3 ytan=vec3(1,0,0);\nvec3 ybin=vec3(0,0,1);\nvec3 ztan=vec3(1,0,0);\nvec3 zbin=vec3(0,1,0);\nvec3 normalizedNormal=normalize(normal);\nnormalizedNormal*=normalizedNormal;\nvec3 worldBinormal=normalize(xbin*normalizedNormal.x+ybin*normalizedNormal.y+zbin*normalizedNormal.z);\nvec3 worldTangent=normalize(xtan*normalizedNormal.x+ytan*normalizedNormal.y+ztan*normalizedNormal.z);\nworldTangent=(world*vec4(worldTangent,1.0)).xyz;\nworldBinormal=(world*vec4(worldBinormal,1.0)).xyz;\nvec3 worldNormal=normalize(cross(worldTangent,worldBinormal));\ntangentSpace[0]=worldTangent;\ntangentSpace[1]=worldBinormal;\ntangentSpace[2]=worldNormal;\n#endif\n\n#include<clipPlaneVertex>\n\n#include<fogVertex>\n\n#include<shadowsVertex>[0..maxSimultaneousLights]\n\n#ifdef VERTEXCOLOR\nvColor=color;\n#endif\n\n#ifdef POINTSIZE\ngl_PointSize=pointSize;\n#endif\n}\n";
-BABYLON.Effect.ShadersStore['snowPixelShader'] = "precision highp float;\n\nuniform vec3 vEyePosition;\nuniform vec4 vDiffuseColor;\n#ifdef SPECULARTERM\nuniform vec4 vSpecularColor;\n#endif\n\nvarying vec3 vPositionW;\n#ifdef VERTEXCOLOR\nvarying vec4 vColor;\n#endif\n\n#include<helperFunctions>\n\n#include<__decl__lightFragment>[0..maxSimultaneousLights]\n\n#ifdef DIFFUSEX\nvarying vec2 vTextureUVX;\nuniform sampler2D diffuseSamplerX;\n#ifdef BUMPX\nuniform sampler2D normalSamplerX;\n#endif\n#endif\n#ifdef DIFFUSEY\nvarying vec2 vTextureUVY;\nuniform sampler2D diffuseSamplerY;\n#ifdef BUMPY\nuniform sampler2D normalSamplerY;\n#endif\n#endif\n#ifdef DIFFUSEZ\nvarying vec2 vTextureUVZ;\nuniform sampler2D diffuseSamplerZ;\n#ifdef BUMPZ\nuniform sampler2D normalSamplerZ;\n#endif\n#endif\n#ifdef DIFFUSENOISE\nvarying vec2 vTextureUVN;\nuniform sampler2D perlinNoiseSampler;\n#endif\n#ifdef NORMAL\nvarying mat3 tangentSpace;\n#endif\nuniform float time;\nvarying float finalnoise;\nvarying float normaly;\n#include<lightsFragmentFunctions>\n#include<shadowsFragmentFunctions>\n#include<clipPlaneFragmentDeclaration>\n#include<fogFragmentDeclaration>\nfloat becomesnowtime(float time)\n{\nreturn sin(min(time/10000.* finalnoise,1.57))*normaly;\n}\nvoid main(void) {\n\n#include<clipPlaneFragment>\nvec3 viewDirectionW=normalize(vEyePosition-vPositionW);\n\nvec4 baseColor=vec4(0.,0.,0.,1.);\nvec3 diffuseColor=vDiffuseColor.rgb;\n\nfloat alpha=vDiffuseColor.a;\n\n#ifdef NORMAL\nvec3 normalW=tangentSpace[2];\n#else\nvec3 normalW=vec3(1.0,1.0,1.0);\n#endif\nvec4 baseNormal=vec4(0.0,0.0,0.0,1.0);\nnormalW*=normalW;\n#ifdef DIFFUSEX\nbaseColor+=texture2D(diffuseSamplerX,vTextureUVX)*normalW.x;\n#ifdef BUMPX\nbaseNormal+=texture2D(normalSamplerX,vTextureUVX)*normalW.x;\n#endif\n#endif\n#ifdef DIFFUSEY\n\nfloat t=becomesnowtime(time);\nvec4 temp=texture2D(diffuseSamplerX,vTextureUVY)*normalW.y*(1.-t)\n+texture2D(diffuseSamplerY,vTextureUVY)*normalW.y*t;\nbaseColor+=temp;\n#ifdef BUMPY\ntemp=texture2D(normalSamplerX,vTextureUVY)*normalW.y*(1.-t)\n+texture2D(normalSamplerY,vTextureUVY)*normalW.y*t;\nbaseNormal+=temp;\n#endif\n#endif\n#ifdef DIFFUSEZ\nbaseColor+=texture2D(diffuseSamplerZ,vTextureUVZ)*normalW.z;\n#ifdef BUMPZ\nbaseNormal+=texture2D(normalSamplerZ,vTextureUVZ)*normalW.z;\n#endif\n#endif\n#ifdef NORMAL\nnormalW=normalize((2.0*baseNormal.xyz-1.0)*tangentSpace);\n#endif\n#ifdef ALPHATEST\nif (baseColor.a<0.4)\ndiscard;\n#endif\n#include<depthPrePass>\n#ifdef VERTEXCOLOR\nbaseColor.rgb*=vColor.rgb;\n#endif\n\nvec3 diffuseBase=vec3(0.,0.,0.);\nlightingInfo info;\nfloat shadow=1.;\n#ifdef SPECULARTERM\nfloat glossiness=vSpecularColor.a;\nvec3 specularBase=vec3(0.,0.,0.);\nvec3 specularColor=vSpecularColor.rgb;\n#else\nfloat glossiness=0.;\n#endif\n#include<lightFragment>[0..maxSimultaneousLights]\n#ifdef VERTEXALPHA\n\nalpha=abs(normalW.y);\n#endif\n#ifdef SPECULARTERM\nvec3 finalSpecular=specularBase*specularColor;\n#else\nvec3 finalSpecular=vec3(0.0);\n#endif\nvec3 finalDiffuse=clamp(diffuseBase*diffuseColor,0.0,1.0)*baseColor.rgb;\n\nvec4 color=vec4(finalDiffuse+finalSpecular,alpha);\n\n#include<fogFragment>\ngl_FragColor=color;\n\n}\n";
+BABYLON.Effect.ShadersStore['snowVertexShader'] = "precision highp float;\n\nattribute vec3 position;\n#ifdef UV1\nattribute vec2 uv;\n#endif\n#ifdef NORMAL\nattribute vec3 normal;\n#endif\n#ifdef VERTEXCOLOR\nattribute vec4 color;\n#endif\n#include<bonesDeclaration>\n\n#include<instancesDeclaration>\nuniform mat4 view;\nuniform mat4 viewProjection;\n#ifdef DIFFUSE\nvarying vec2 vDiffuseUV;\n#endif\n#ifdef DIFFUSEX\nvarying vec2 vTextureUVX;\n#endif\n#ifdef DIFFUSEY\nvarying vec2 vTextureUVY;\n#endif\n#ifdef DIFFUSEZ\nvarying vec2 vTextureUVZ;\n#endif\n#ifdef DIFFUSENOISE\nvarying vec2 vTextureUVN;\nuniform sampler2D perlinNoiseSampler;\n#endif\nuniform float tileSize;\nuniform float noiseSize;\n#ifdef POINTSIZE\nuniform float pointSize;\n#endif\n\nvarying vec3 vPositionW;\n#ifdef NORMAL\nvarying mat3 tangentSpace;\n#endif\n#ifdef VERTEXCOLOR\nvarying vec4 vColor;\n#endif\n#include<clipPlaneVertexDeclaration>\n#include<fogVertexDeclaration>\n#include<__decl__lightFragment>[0..maxSimultaneousLights]\nuniform float time;\nvarying float finalnoise;\nvarying float normaly;\nuniform float noiseStrength;\n\nfloat translationSpeed=0.0;\nfloat r(float n)\n{\nreturn fract(cos(n*89.42)*343.42);\n}\nvec2 r(vec2 n)\n{\nreturn vec2(r(n.x*23.62-300.0+n.y*34.35),r(n.x*45.13+256.0+n.y*38.89)); \n}\nfloat worley(vec2 n,float s)\n{\nfloat dis=1.0;\nfor(int x=-1; x<=1; x++)\n{\nfor(int y=-1; y<=1; y++)\n{\nvec2 p=floor(n/s)+vec2(x,y);\nfloat d=length(r(p)+vec2(x,y)-fract(n/s));\nif (dis>d)\ndis=d;\n}\n}\nreturn 1.0-dis;\n}\nvec3 hash33(vec3 p3)\n{\np3=fract(p3*vec3(0.1031,0.11369,0.13787));\np3+=dot(p3,p3.yxz+19.19);\nreturn -1.0+2.0*fract(vec3((p3.x+p3.y)*p3.z,(p3.x+p3.z)*p3.y,(p3.y+p3.z)*p3.x));\n}\nfloat perlinNoise(vec3 p)\n{\nvec3 pi=floor(p);\nvec3 pf=p-pi;\nvec3 w=pf*pf*(3.0-2.0*pf);\nreturn mix(\nmix(\nmix(\ndot(pf-vec3(0,0,0),hash33(pi+vec3(0,0,0))),\ndot(pf-vec3(1,0,0),hash33(pi+vec3(1,0,0))),\nw.x\n),\nmix(\ndot(pf-vec3(0,0,1),hash33(pi+vec3(0,0,1))),\ndot(pf-vec3(1,0,1),hash33(pi+vec3(1,0,1))),\nw.x\n),\nw.z\n),\nmix(\nmix(\ndot(pf-vec3(0,1,0),hash33(pi+vec3(0,1,0))),\ndot(pf-vec3(1,1,0),hash33(pi+vec3(1,1,0))),\nw.x\n),\nmix(\ndot(pf-vec3(0,1,1),hash33(pi+vec3(0,1,1))),\ndot(pf-vec3(1,1,1),hash33(pi+vec3(1,1,1))),\nw.x\n),\nw.z\n),\nw.y\n);\n}\nfloat zerotofive(float normaly)\n{\nreturn max(0.,normaly);\n}\nvoid main(void)\n{\n#include<instancesVertex>\n#include<bonesVertex>\nvec3 positionup=position;\n\nvec2 noiseuv=vec2(position.x,position.z);\nfloat dis=(\n1.0+perlinNoise(vec3(noiseuv/vec2(noiseSize,noiseSize),0.0)*8.0))\n*(1.0+(worley(noiseuv,32.0)+ 0.5*worley(2.0*noiseuv,32.0)+0.25*worley(4.0*noiseuv,32.0))\n);\nfinalnoise=dis/10.0;\n#ifdef DIFFUSENOISE\n\n\n#endif\n\n\n\n#ifdef PUSHUP\npositionup.y+=time*zerotofive(normal.y)*finalnoise;\n#endif \ngl_Position=viewProjection*finalWorld*vec4(positionup,1.0);\nvec4 worldPos=finalWorld*vec4(positionup,1.0);\nvPositionW=vec3(worldPos);\nnormaly=normal.y;\n#ifdef DIFFUSE\nvDiffuseUV=uv;\n\n#endif\n#ifdef DIFFUSEX\nvTextureUVX=worldPos.zy/tileSize;\n#endif\n#ifdef DIFFUSEY\nvTextureUVY=worldPos.xz/tileSize;\n#endif\n#ifdef DIFFUSEZ\nvTextureUVZ=worldPos.xy/tileSize;\n#endif\n#ifdef DIFFUSENOISE\nvTextureUVN=worldPos.xz/(tileSize*5.);\n#endif\n#ifdef NORMAL\n\nvec3 xtan=vec3(0,0,1);\nvec3 xbin=vec3(0,1,0);\nvec3 ytan=vec3(1,0,0);\nvec3 ybin=vec3(0,0,1);\nvec3 ztan=vec3(1,0,0);\nvec3 zbin=vec3(0,1,0);\nvec3 normalizedNormal=normalize(normal);\nnormalizedNormal*=normalizedNormal;\nvec3 worldBinormal=normalize(xbin*normalizedNormal.x+ybin*normalizedNormal.y+zbin*normalizedNormal.z);\nvec3 worldTangent=normalize(xtan*normalizedNormal.x+ytan*normalizedNormal.y+ztan*normalizedNormal.z);\nworldTangent=(world*vec4(worldTangent,1.0)).xyz;\nworldBinormal=(world*vec4(worldBinormal,1.0)).xyz;\nvec3 worldNormal=normalize(cross(worldTangent,worldBinormal));\ntangentSpace[0]=worldTangent;\ntangentSpace[1]=worldBinormal;\ntangentSpace[2]=worldNormal;\n#endif\n\n#include<clipPlaneVertex>\n\n#include<fogVertex>\n\n#include<shadowsVertex>[0..maxSimultaneousLights]\n\n#ifdef VERTEXCOLOR\nvColor=color;\n#endif\n\n#ifdef POINTSIZE\ngl_PointSize=pointSize;\n#endif\n}\n";
+BABYLON.Effect.ShadersStore['snowPixelShader'] = "precision highp float;\n\nuniform vec3 vEyePosition;\nuniform vec4 vDiffuseColor;\n#ifdef SPECULARTERM\nuniform vec4 vSpecularColor;\n#endif\n\nvarying vec3 vPositionW;\n#ifdef VERTEXCOLOR\nvarying vec4 vColor;\n#endif\nuniform float tileSize;\n\n#include<helperFunctions>\n\n#include<__decl__lightFragment>[0..maxSimultaneousLights]\n\n#ifdef DIFFUSE\nvarying vec2 vDiffuseUV;\nuniform sampler2D diffuseSampler;\n#ifdef BUMPY\nuniform sampler2D normalSampler;\n#endif\n#endif\n#ifdef DIFFUSEX\nvarying vec2 vTextureUVX;\nuniform sampler2D diffuseSamplerX;\n#ifdef BUMPX\nuniform sampler2D normalSamplerX;\n#endif\n#endif\n#ifdef DIFFUSEY\nvarying vec2 vTextureUVY;\nuniform sampler2D diffuseSamplerY;\n#ifdef BUMPY\nuniform sampler2D normalSamplerY;\n#endif\n#endif\n#ifdef DIFFUSEZ\nvarying vec2 vTextureUVZ;\nuniform sampler2D diffuseSamplerZ;\n#ifdef BUMPZ\nuniform sampler2D normalSamplerZ;\n#endif\n#endif\n#ifdef DIFFUSENOISE\n\nuniform sampler2D perlinNoiseSampler;\nuniform float noiseSize;\n#endif\n#ifdef NORMAL\nvarying mat3 tangentSpace;\n#endif\nuniform float time;\nvarying float finalnoise;\nvarying float normaly;\n#include<lightsFragmentFunctions>\n#include<shadowsFragmentFunctions>\n#include<clipPlaneFragmentDeclaration>\n#include<fogFragmentDeclaration>\nfloat becomesnowtime(float time)\n{\nreturn sin(min(time* finalnoise,1.57))*normaly;\n}\n#ifdef DIFFUSENOISE\nfloat becomesnowtimetexture(float time)\n{\n\n\n\nreturn sin(min(time/2.* texture2D(perlinNoiseSampler,vTextureUVY).r,1.57))*normaly;\n\n}\n#endif\nvoid main(void) {\n\n#include<clipPlaneFragment>\nvec3 viewDirectionW=normalize(vEyePosition-vPositionW);\n\nvec4 baseColor=vec4(0.,0.,0.,1.);\nvec3 diffuseColor=vDiffuseColor.rgb;\n\nfloat alpha=vDiffuseColor.a;\n\n#ifdef NORMAL\nvec3 normalW=tangentSpace[2];\n#else\nvec3 normalW=vec3(1.0,1.0,1.0);\n#endif\nvec4 baseNormal=vec4(0.0,0.0,0.0,1.0);\nnormalW*=normalW;\nvec4 temp;\n#ifdef DIFFUSENOISE\nfloat t=becomesnowtimetexture(time);\n#else\nfloat t=becomesnowtime(time);\n#endif\n#ifdef DIFFUSE\nbaseColor+=texture2D(diffuseSampler,vDiffuseUV);\nvec4 snowcolor=vec4(0.,0.,0.,1.);\nvec4 snownormal=vec4(0.,0.,0.,1.);\n#ifdef DIFFUSEX\nsnowcolor+=texture2D(diffuseSamplerX,vTextureUVX)*normalW.x;\n#ifdef BUMPX\nsnownormal+=texture2D(normalSamplerX,vTextureUVX)*normalW.x;\n#endif\n#endif\n#ifdef DIFFUSEY\nsnowcolor+=texture2D(diffuseSamplerY,vTextureUVY)*normalW.y;\n#ifdef BUMPY\nsnownormal+=texture2D(normalSamplerY,vTextureUVY)*normalW.y;\n#endif\n#endif\n#ifdef DIFFUSEZ\nsnowcolor+=texture2D(diffuseSamplerZ,vTextureUVZ)*normalW.z;\n#ifdef BUMPZ\nsnownormal+=texture2D(normalSamplerZ,vTextureUVZ)*normalW.z;\n#endif\n#endif\nbaseColor=baseColor*(1.-t)+snowcolor*t;\n#ifdef BUMP\nbaseNormal+=texture2D(normalSampler,vDiffuseUV);\nbaseNormal=baseNormal*(1.-t)+snownormal*t;\n#endif\n#else\n#ifdef PUSHUP\n#ifdef DIFFUSEX\nbaseColor+=texture2D(diffuseSamplerX,vTextureUVX)*normalW.x;\n#ifdef BUMPX\nbaseNormal+=texture2D(normalSamplerX,vTextureUVX)*normalW.x;\n#endif\n#endif\n#ifdef DIFFUSEY\nbaseColor+=texture2D(diffuseSamplerY,vTextureUVY)*normalW.y;\n#ifdef BUMPY\nbaseNormal+=texture2D(normalSamplerY,vTextureUVY)*normalW.y;\n#endif\n#endif\n#ifdef DIFFUSEZ\nbaseColor+=texture2D(diffuseSamplerZ,vTextureUVZ)*normalW.z;\n#ifdef BUMPZ\nbaseNormal+=texture2D(normalSamplerZ,vTextureUVZ)*normalW.z;\n#endif\n#endif\n#else\n\n#ifdef DIFFUSEX\ntemp=texture2D(diffuseSamplerX,vTextureUVX)*normalW.x*( 1.-t)\n+texture2D(diffuseSamplerY,vTextureUVX)*normalW.x*t;\nbaseColor+=temp;\n#ifdef BUMPX\ntemp=texture2D(normalSamplerX,vTextureUVX)*normalW.x*( 1.-t)\n+texture2D(normalSamplerY,vTextureUVX)*normalW.x*t;\nbaseNormal+=temp;\n#endif\n#endif\n#ifdef DIFFUSEY\ntemp=texture2D(diffuseSamplerX,vTextureUVY)*normalW.y*(1.-t)\n+texture2D(diffuseSamplerY,vTextureUVY)*normalW.y*t;\nbaseColor+=temp;\n#ifdef BUMPY\ntemp=texture2D(normalSamplerX,vTextureUVY)*normalW.y*(1.-t)\n+texture2D(normalSamplerY,vTextureUVY)*normalW.y*t;\nbaseNormal+=temp;\n#endif\n#endif\n#ifdef DIFFUSEZ\ntemp=texture2D(diffuseSamplerZ,vTextureUVZ)*normalW.z*(1.- t)\n+texture2D(diffuseSamplerY,vTextureUVZ)*normalW.z*t;\nbaseColor+=temp;\n#ifdef BUMPZ\ntemp=texture2D(normalSamplerZ,vTextureUVZ)*normalW.z*(1.- t)\n+texture2D(normalSamplerY,vTextureUVZ)*normalW.z*t;\nbaseNormal+=temp;\n#endif\n#endif\n#endif\n#endif\n#ifdef NORMAL\nnormalW=normalize((2.0*baseNormal.xyz-1.0)*tangentSpace);\n#endif\n#ifdef ALPHATEST\nif (baseColor.a<0.4)\ndiscard;\n#endif\n#include<depthPrePass>\n#ifdef VERTEXCOLOR\nbaseColor.rgb*=vColor.rgb;\n#endif\n\nvec3 diffuseBase=vec3(0.,0.,0.);\nlightingInfo info;\nfloat shadow=1.;\n#ifdef SPECULARTERM\nfloat glossiness=vSpecularColor.a;\nvec3 specularBase=vec3(0.,0.,0.);\nvec3 specularColor=vSpecularColor.rgb;\n#else\nfloat glossiness=0.;\n#endif\n#include<lightFragment>[0..maxSimultaneousLights]\n#ifdef VERTEXALPHA\n\nalpha=abs(normalW.y);\n#endif\n#ifdef SPECULARTERM\nvec3 finalSpecular=specularBase*specularColor;\n#else\nvec3 finalSpecular=vec3(0.0);\n#endif\nvec3 finalDiffuse=clamp(diffuseBase*diffuseColor,0.0,1.0)*baseColor.rgb;\n\nvec4 color=vec4(finalDiffuse+finalSpecular,alpha);\n\n#include<fogFragment>\ngl_FragColor=color;\n\n}\n";

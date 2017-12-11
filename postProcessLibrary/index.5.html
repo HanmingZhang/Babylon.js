@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+	<title>Shaders Library</title>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.2/dat.gui.min.js"></script>
+	<script src="../tools/DevLoader/BabylonLoader.js"></script>
+	<script src="../loaders/src/OBJ/babylon.objFileLoader.js"></script>
+
+	<style>
+		html,
+		body {
+			width: 100%;
+			height: 100%;
+			padding: 0;
+			margin: 0;
+			overflow: hidden;
+		}
+		
+		#renderCanvas {
+			width: 100%;
+			height: 100%;
+		}
+
+		#fps {
+			position: absolute;
+			background-color: black;
+			border: 2px solid red;
+			text-align: center;
+			font-size: 16px;
+			color: white;
+			top: 15px;
+			left: 10px;
+			width: 60px;
+			height: 20px;
+		}
+
+		
+	</style>
+</head>
+
+<body>
+	<div id="fps">0</div>
+	<canvas id="renderCanvas"></canvas>
+
+	<script>
+	BABYLONDEVTOOLS.Loader.load(function() {
+		if (BABYLON.Engine.isSupported()) {
+			var canvas = document.getElementById("renderCanvas");
+			var engine = new BABYLON.Engine(canvas, true);					
+			BABYLONDEVTOOLS.Loader.debugShortcut(engine);	
+			var divFps = document.getElementById("fps");
+
+			// Scene Configuration
+			var scene = new BABYLON.Scene(engine);
+			scene.clearColor = new BABYLON.Color4(0.02, 0.02, 0.02, 1.0);
+			scene.imageProcessingConfiguration.contrast = 1.6;
+			scene.imageProcessingConfiguration.exposure = 0.6;
+			scene.imageProcessingConfiguration.toneMappingEnabled = true;
+
+			// Camera
+			var camTarget = new BABYLON.Vector3(0.0, 8.0, 0.0)
+			var camera = new BABYLON.ArcRotateCamera("Camera", 2.42, 1.45, 69, camTarget, scene);
+
+			camera.attachControl(canvas, true);
+			camera.minZ = 0.1;
+
+			// ----------------------------------------------------------------
+			// Light
+			//var sun = new BABYLON.PointLight("Omni", new BABYLON.Vector3(0, 60, 10), scene);
+			//var ambient = new BABYLON.HemisphericLight("Ambient", new BABYLON.Vector3(0, 1, 0), scene);
+
+			var ambient = new BABYLON.PointLight("Ambient", new BABYLON.Vector3(50, 110, -50), scene);
+			ambient.intensity = 1.5; //0.1;
+			ambient.specular = new BABYLON.Color3(0.52, 0.6, 0.55);
+
+			// var ambient = new BABYLON.DirectionalLight("Lighting", new BABYLON.Vector3(1, -1, 0), scene);
+			// ambient.intensity = 0.1;
+
+
+			// ----------------------------------------------------------------
+			// Shadow
+			var shadowGenerator = new BABYLON.ShadowGenerator(2048, ambient);
+
+			// Load scene mesh
+			var loader = new BABYLON.AssetsManager(scene);
+
+			// farm house mesh
+			var farmHouse = loader.addMeshTask("farmHouse", "", "../assets/DemoScene/", "farmhouse_obj.obj");
+			var farmHouseMaterial = new BABYLON.StandardMaterial("farmHouseMaterial", scene);
+			farmHouseMaterial.diffuseTexture = new BABYLON.Texture("../assets/DemoScene/diffuse.jpg", scene);
+			farmHouseMaterial.bumpTexture = new BABYLON.Texture("../assets/DemoScene/normal.jpg", scene);
+			farmHouseMaterial.diffuseColor = new BABYLON.Color3(1, 1, 1);
+			farmHouseMaterial.specularPower = 32;
+			farmHouseMaterial.specularTexture = new BABYLON.Texture("../assets/DemoScene/specular.jpg", scene);
+			farmHouseMaterial.emissiveColor = new BABYLON.Color3(0.2, 0.2, 0.2);
+			farmHouseMaterial.useGlossinessFromSpecularMapAlpha = true;
+			farmHouseMaterial.useParallax = true;
+			farmHouseMaterial.useParallaxOcclusion = true;
+			farmHouseMaterial.parallaxScaleBias = 0.02;
+
+			// bare tree mesh
+			var bareTree = loader.addMeshTask("bareTree", "", "../assets/DemoScene/", "bare.obj");
+			var bareTreeMaterial = new BABYLON.StandardMaterial("bareTreeMaterial", scene);
+			bareTreeMaterial.diffuseTexture = new BABYLON.Texture("../assets/DemoScene/bare_diffuse.jpg", scene);
+			bareTreeMaterial.bumpTexture = new BABYLON.Texture("../assets/DemoScene/bare_normal.jpg", scene);
+			bareTreeMaterial.diffuseColor = new BABYLON.Color3(1, 1, 1);
+			// farmHouseMaterial.specularPower = 32;
+			// farmHouseMaterial.specularTexture = new BABYLON.Texture("../assets/farmHouse/specular.jpg", scene);
+			// farmHouseMaterial.emissiveColor = new BABYLON.Color3(0.2, 0.2, 0.2);
+			// farmHouseMaterial.useGlossinessFromSpecularMapAlpha = true;
+			// farmHouseMaterial.useParallax = true;
+			// farmHouseMaterial.useParallaxOcclusion = true;
+			// farmHouseMaterial.parallaxScaleBias = 0.02;
+
+			// lamp mesh
+			var lamp = loader.addMeshTask("lamp", "", "../assets/DemoScene/", "lamp.obj");
+
+			// island mesh
+			var island = loader.addMeshTask("island", "", "../assets/DemoScene/", "island.obj");
+
+			var islandMaterial = new BABYLON.StandardMaterial("islandMaterial", scene);
+			islandMaterial.diffuseTexture = new BABYLON.Texture("/playground/textures/rock.png", scene);
+			islandMaterial.diffuseTexture.uScale = 5.0;
+			islandMaterial.diffuseTexture.vScale = 5.0;
+			islandMaterial.bumpTexture = new BABYLON.Texture("/playground/textures/rockn.png", scene);
+			islandMaterial.bumpTexture.uScale = 5.0;
+			islandMaterial.bumpTexture.vScale = 5.0;
+			islandMaterial.specularPower = 64;
+
+			// var triPlanar = new BABYLON.TriPlanarMaterial("triplanar", scene);
+			// triPlanar.diffuseTextureX = new BABYLON.Texture("/playground/textures/rock.png", scene);
+			// triPlanar.diffuseTextureY = new BABYLON.Texture("/playground/textures/rock.png", scene);
+			// triPlanar.diffuseTextureZ = triPlanar.diffuseTextureX;
+			// triPlanar.normalTextureX = new BABYLON.Texture("/playground/textures/rockn.png", scene);
+			// triPlanar.normalTextureY = new BABYLON.Texture("/playground/textures/rockn.png", scene);
+			// triPlanar.normalTextureZ = triPlanar.normalTextureX;
+			// triPlanar.specularPower = 64;
+			// triPlanar.tileSize = 5.0;
+
+			// railing mesh
+			var railing = loader.addMeshTask("railing", "", "../assets/DemoScene/", "railing.obj");
+
+
+			loader.onTaskSuccess = (task) => {
+				var m = task.loadedMeshes;
+
+				//console.log('loaded meshed size is ', m.length);
+				//console.log('task name is ', task.name);
+
+				// for (var i = 0; i < m.length; i++) {
+				// 	m[i].material = farmHouseMaterial;
+				// 	m[i].scaling = new BABYLON.Vector3(3.0, 3.0, 3.0);
+				// 	// to generate shadows
+				// 	shadowGenerator.getShadowMap().renderList.push(m[i]);
+				// }
+
+				switch(task.name){
+					case "farmHouse" :
+						// farm house
+						m[0].material = farmHouseMaterial;
+						m[1].material = farmHouseMaterial;
+						// m[0].scaling = new BABYLON.Vector3(3.0, 3.0, 3.0);
+						// m[1].scaling = new BABYLON.Vector3(3.0, 3.0, 3.0);
+						// to generate shadows
+						shadowGenerator.getShadowMap().renderList.push(m[0]);
+						shadowGenerator.getShadowMap().renderList.push(m[1]);
+						//m[0].receiveShadows = true;
+						//m[1].receiveShadows = true;
+						break;
+					case "bareTree" :
+						// birch tree
+						m[0].material = bareTreeMaterial;
+						//m[0].scaling = new BABYLON.Vector3(8.0, 8.0, 8.0);
+						shadowGenerator.getShadowMap().renderList.push(m[0]);
+						break;
+					case "lamp" :
+						// lamp
+						m[0].material = bareTreeMaterial;
+						//m[0].scaling = new BABYLON.Vector3(8.0, 8.0, 8.0);
+						shadowGenerator.getShadowMap().renderList.push(m[0]);
+						break;
+					case "island":
+						m[0].material = islandMaterial; //triPlanar;
+						//shadowGenerator.getShadowMap().renderList.push(m[0]);
+						//m[0].receiveShadows = true;
+						break;
+					case "railing":
+						m[0].material = bareTreeMaterial;
+						//shadowGenerator.getShadowMap().renderList.push(m[0]);
+						break;
+					default:
+						break
+				}
+			};
+
+			BABYLON.OBJFileLoader.OPTIMIZE_WITH_UV = true;
+			loader.load();
+
+			shadowGenerator.usePoissonSampling = true;
+			shadowGenerator.getShadowMap().refreshRate = 60; // considering lighting/thunder is dynamic light....
+			
+
+			// ----------------------------------------------------------------
+			// Lamp light
+			var lamplight = new BABYLON.SpotLight("spotLight", new BABYLON.Vector3(10.2, 19, -20.5), new BABYLON.Vector3(0, -1, 0), Math.PI / 3, 50, scene);
+			
+			var lampSphere = BABYLON.Mesh.CreateSphere("LampSphere", 16, 1.0, scene);
+			lampSphere.material = new BABYLON.StandardMaterial("bmat", scene);
+			lampSphere.material.diffuseColor = new BABYLON.Color3(0.0, 1.0, 0.0);
+			lampSphere.material.emissiveColor = new BABYLON.Color3(1, 1, 1);
+			//lampSphere.material.backFaceCulling = true;
+			//lampSphere.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+			lampSphere.position = lamplight.position;
+			
+			// Create the "God Rays" effect (volumetric light scattering)
+			var godrays = new BABYLON.VolumetricLightScatteringPostProcess('godrays', 1.0, camera, lampSphere, 100, BABYLON.Texture.BILINEAR_SAMPLINGMODE, engine, false);
+			//godrays._volumetricLightScatteringRTT.renderParticles = true; // no particles in our case
+			godrays.exposure = 0.1;
+			godrays.decay = 0.96815;
+			godrays.weight = 0.91;
+			godrays.density = 1.24;
+			godrays.mesh.position = lamplight.position;
+
+			// // ----------------------------------------------------------------
+			// // pbr material test
+			// var testBox = BABYLON.Mesh.CreateBox("testBox", 10.0, scene);
+			// testBox.position.y = 8.0;
+			// testBox.position.x = -40.0;
+
+			// var hdrTexture = new BABYLON.CubeTexture.CreateFromPrefilteredData("../assets/environment.dds", scene);
+			// hdrTexture.gammaSpace = false;
+			
+			// var wood = new BABYLON.PBRMaterial("wood", scene);
+			// wood.reflectionTexture = hdrTexture;
+			// wood.environmentIntensity = 1;
+			// wood.albedoColor = BABYLON.Color3.White();
+			// wood.albedoTexture = new BABYLON.Texture("../assets/test_albedo.png", scene);
+			// wood.bumpTexture = new BABYLON.Texture("../assets/test_bump.jpg", scene);
+			// wood.useParallax = true;
+			// wood.useParallaxOcclusion = true;
+			// wood.parallaxScaleBias = 0.02;
+			// testBox.material = wood;
+
+
+			// ----------------------------------------------------------------
+			// Skybox
+			var skybox = BABYLON.Mesh.CreateBox("skyBox", 1000.0, scene);
+
+			// var skyboxMaterial = new BABYLON.StandardMaterial("skyBoxMaterial", scene);
+			// skyboxMaterial.backFaceCulling = false;
+			// skyboxMaterial.reflectionTexture = new BABYLON.CubeTexture("/playground/textures/skybox3", scene);
+			// skyboxMaterial.reflectionTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
+			// skyboxMaterial.diffuseColor = new BABYLON.Color3(0, 0, 0);
+			// skyboxMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+			// skyboxMaterial.disableLighting = true;
+
+
+			// Sky material
+			//var skyboxMaterial = new BABYLON.SkyMaterial("skyMaterial", scene);
+			//skyboxMaterial.backFaceCulling = false;
+			//skyboxMaterial.luminance = 0.01;
+
+			var skyboxMaterial = new BABYLON.anotherSkyMaterial("skyMaterial", scene);
+            skyboxMaterial.backFaceCulling = false;
+			skyboxMaterial.skyTime = 0.05;
+
+			skybox.infiniteDistance = true;
+			skybox.material = skyboxMaterial;
+
+			// ----------------------------------------------------------------
+			// thunder / lighting 
+			// var thunder = BABYLON.Mesh.CreateGround("ground", 50, 100, 0, scene, false);
+			// thunder.rotation.x = 0.5 * Math.PI;
+			// thunder.position.y = 90.0;
+			// thunder.position.z = -50.0;
+			//thunder.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL
+
+			// var thunderLight = new BABYLON.DirectionalLight("ThunderDirectionalLight", new BABYLON.Vector3(0, 0, -1), scene);
+			// thunderLight.setEnabled(false);
+
+			// var thunderMaterial = new BABYLON.StandardMaterial("thunderMaterial", scene);
+			// thunderMaterial.diffuseTexture = new BABYLON.Texture("../assets/thunder_1.png", scene);
+			// thunderMaterial.diffuseTexture.hasAlpha = true;
+			// thunderMaterial.useAlphaFromDiffuseTexture = true;
+			// thunder.material = thunderMaterial;
+			// thunder.isVisible = false;
+
+			// ----------------------------------------------------------------
+			// Ground
+			//var ground = BABYLON.Mesh.CreateGroundFromHeightMap("ground", "../assets/heightMap.png", 100, 100, 500, 0, 10, scene, false);
+			var ground = BABYLON.Mesh.CreateGround("ground", 38, 68, 0, scene, false);
+			//ground.scaling = new BABYLON.Vector3(0.8, 0.8, 0.8);
+			ground.position.x = 5;
+			ground.position.y = 4.5;
+			ground.receiveShadows = true;
+
+			// var heightGround = BABYLON.Mesh.CreateGroundFromHeightMap("heightGround", "../assets/heightMap_island.png", 200, 200, 500, 0, 30, scene, false);
+			// heightGround.position.y = -3.0;
+
+
+
+			// // Ocean
+			// var ocean = BABYLON.Mesh.CreateGround("oceanGround", 512, 512, 0, scene, false);
+			// //ocean.scaling = new BABYLON.Vector3(0.8, 0.8, 0.8);
+			// ocean.position.y = -5.0;
+
+
+			// Ocean Ground
+			var oceanGround = BABYLON.Mesh.CreateGround("oceanGround", 512, 512, 32, scene, false);
+			oceanGround.position.y = -5.0;
+
+			// water
+			var waterMesh = BABYLON.Mesh.CreateGround("waterMesh", 512, 512, 32, scene, false);
+			waterMesh.position.y = -4.5;
+
+			
+
+
+			// ----------------------------------------------------------------
+			// Raindrop material
+			var raindropsMaterial = new BABYLON.RaindropsMaterial("raindropsMaterial", scene);
+			var groundTextureUVScale = 3.0;
+			var groundTextureUSkewValue = 1.47;
+			var groundTextureVSkewValue = 2.64;
+
+			raindropsMaterial.diffuseTexture = new BABYLON.Texture("../assets/Raindrops_base.bmp", scene); 
+			raindropsMaterial.diffuseTexture.uScale = groundTextureUVScale * groundTextureUSkewValue;
+			raindropsMaterial.diffuseTexture.vScale = groundTextureUVScale * groundTextureVSkewValue;
+			raindropsMaterial.backFaceCulling = false;
+			raindropsMaterial.raindropTexture = new BABYLON.Texture("../assets/Raindrops_normal.bmp", scene); 
+			raindropsMaterial.raindropTexture.uScale = 1.0 * groundTextureUSkewValue;
+			raindropsMaterial.raindropTexture.vScale = 1.0 * groundTextureVSkewValue;
+			raindropsMaterial.raindropGroundHeightTexture = new BABYLON.Texture("../assets/Raindrops_height.bmp", scene); 
+			raindropsMaterial.raindropGroundHeightTexture.uScale = groundTextureUVScale * groundTextureUSkewValue;
+			raindropsMaterial.raindropGroundHeightTexture.vScale = groundTextureUVScale * groundTextureVSkewValue;
+			raindropsMaterial.raindropGroundNormalTexture = new BABYLON.Texture("../assets/Raindrops_groundNormal.jpg", scene); 
+			raindropsMaterial.raindropGroundNormalTexture.uScale = groundTextureUVScale * groundTextureUSkewValue;
+			raindropsMaterial.raindropGroundNormalTexture.vScale = groundTextureUVScale * groundTextureVSkewValue;
+			raindropsMaterial.raindropWaterNormalTexture = new BABYLON.Texture("../assets/Raindrops_waterNormal.bmp", scene);
+			raindropsMaterial.raindropSpeed = 35.0;
+			raindropsMaterial.raindropSize = 10.0;
+			raindropsMaterial.addToRenderList(skybox);
+
+			ground.material = raindropsMaterial;
+			
+
+			// // Ocean Raindrop material
+			// var oceanMaterial = new BABYLON.RaindropsMaterial("oceanMaterial", scene);
+			// var oceanTextureUVScale = 3.0;
+			
+			// oceanMaterial.diffuseTexture = new BABYLON.Texture("../assets/ground.jpg", scene); 
+			// oceanMaterial.diffuseTexture.uScale = groundTextureUVScale;
+			// oceanMaterial.diffuseTexture.vScale = groundTextureUVScale;
+			// oceanMaterial.backFaceCulling = false;
+			// oceanMaterial.raindropTexture = new BABYLON.Texture("../assets/Raindrops_normal.bmp", scene); 
+			// oceanMaterial.raindropTexture.uScale = 1.0;
+			// oceanMaterial.raindropTexture.vScale = 1.0;
+			// oceanMaterial.raindropGroundHeightTexture = new BABYLON.Texture("../assets/Raindrops_height.bmp", scene); 
+			// oceanMaterial.raindropGroundHeightTexture.uScale = groundTextureUVScale;
+			// oceanMaterial.raindropGroundHeightTexture.vScale = groundTextureUVScale;
+			// oceanMaterial.raindropGroundNormalTexture = new BABYLON.Texture("../assets/Raindrops_groundNormal.jpg", scene); 
+			// oceanMaterial.raindropGroundNormalTexture.uScale = groundTextureUVScale;
+			// oceanMaterial.raindropGroundNormalTexture.vScale = groundTextureUVScale;
+			// oceanMaterial.raindropWaterNormalTexture = new BABYLON.Texture("../assets/waterbump.png", scene);
+			// oceanMaterial.raindropSpeed = 35.0;
+			// oceanMaterial.raindropSize = 2.0;
+			// oceanMaterial.raindropPuddleAmount = 0.1;
+			// oceanMaterial.addToRenderList(skybox);
+			// ocean.material = oceanMaterial;
+
+
+			// ocean ground material
+			var oceanGroundMaterial = new BABYLON.StandardMaterial("oceanGround", scene);
+			oceanGroundMaterial.diffuseTexture = new BABYLON.Texture("../assets/ground.jpg", scene);
+			oceanGroundMaterial.diffuseTexture.uScale = 6;
+			oceanGroundMaterial.diffuseTexture.vScale = 6;
+			oceanGroundMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+			oceanGround.material = oceanGroundMaterial;
+
+			// water material
+			var water = new BABYLON.WaterMaterial("water", scene, new BABYLON.Vector2(512, 512));
+			water.backFaceCulling = true;
+			water.bumpTexture = new BABYLON.Texture("../assets/waterbump.png", scene);
+			water.windForce = -5;
+			water.waveHeight = 0.2;
+			water.bumpHeight = 0.05;
+			water.waterColor = new BABYLON.Color3(0.015, 0.23, 0.39);
+			water.colorBlendFactor = 0.2;
+			water.addToRenderList(skybox);
+			water.addToRenderList(oceanGround);
+			waterMesh.material = water;
+
+
+
+			// TODO: should I add a reflection teuxtre to farmHouseMaterial?
+			//farmHouseMaterial.reflectionTexture = raindropsMaterial.reflectionTexture; 
+
+			// ----------------------------------------------------------------
+			// Raindrop particles
+			// Emitters
+			var emitter1 = BABYLON.Mesh.CreateBox("emitter1", 0.1, scene);
+			emitter1.isVisible = false;
+			emitter1.position.y = 100.0;
+
+			// Particles
+			var particleSystem1 = new BABYLON.ParticleSystem("particles1", 4500, scene);
+			particleSystem1.particleTexture = new BABYLON.Texture("../assets/rain.jpg", scene);
+			particleSystem1.minAngularSpeed = 0;
+			particleSystem1.maxAngularSpeed = 0;
+			particleSystem1.minSize = 10;
+			particleSystem1.maxSize = 13;
+			particleSystem1.minLifeTime = 2.0;
+			particleSystem1.maxLifeTime = 2.0;
+			particleSystem1.minEmitPower = 3.0;
+			particleSystem1.maxEmitPower = 3.0;
+			particleSystem1.updateSpeed = 0.01;
+			particleSystem1.emitter = emitter1;
+			particleSystem1.emitRate = 1500;
+			particleSystem1.blendMode = BABYLON.ParticleSystem.BLENDMODE_ONEONE;
+			particleSystem1.minEmitBox = new BABYLON.Vector3(-100, 0, -100);
+			particleSystem1.maxEmitBox = new BABYLON.Vector3(100, 0, 100);
+			particleSystem1.direction1 = new BABYLON.Vector3(0, -1, 0);
+			particleSystem1.direction2 = new BABYLON.Vector3(0, -1, 0);
+			particleSystem1.color1 = new BABYLON.Color4(0.6, 0.6, 0.6, 0.8);
+			particleSystem1.color2 = new BABYLON.Color4(0.6, 0.6, 0.6, 0.8);
+			particleSystem1.colorDead = new BABYLON.Color4(0.2, 0.2, 0.2, 0.3);
+			particleSystem1.gravity = new BABYLON.Vector3(0, -60.0, 0);
+			particleSystem1.start();
+			
+			// ----------------------------------------------------------------
+			// water splash particles
+			// Emitters
+			var emitter2 = BABYLON.Mesh.CreateBox("emitter2", 1.0, scene);
+			emitter2.isVisible = false;
+			emitter2.position.y = -3.0;
+
+			// particle 2 
+			var particleSystem2 = new BABYLON.ParticleSystem("particles2", 8000, scene, null, true);
+
+			particleSystem2.particleTexture = new BABYLON.Texture("../assets/raindrop_splash.png", scene, true, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
+			particleSystem2.startSpriteCellID = 0;
+			particleSystem2.endSpriteCellID = 19;
+			particleSystem2.spriteCellWidth = 84;
+			particleSystem2.spriteCellHeight = 56;
+			particleSystem2.spriteCellLoop = false;
+			particleSystem2.spriteCellChangeSpeed = 1.0; // default is 1.0
+			particleSystem2.minEmitPower = 1.2;
+			particleSystem2.maxEmitPower = 1.4;
+			particleSystem2.emitter = emitter2;
+			particleSystem2.emitRate = 2500;
+			particleSystem2.blendMode = BABYLON.ParticleSystem.BLENDMODE_ONEONE;
+			//particleSystem2.blendMode = BABYLON.ParticleSystem.BLENDMODE_STANDARD;
+			particleSystem2.updateSpeed = 0.015;
+			particleSystem2.minLifeTime = 1.0;
+			particleSystem2.maxLifeTime = 1.0;
+			particleSystem2.minSize = 0.6;
+			particleSystem2.maxSize = 1.1;
+			particleSystem2.gravity = new BABYLON.Vector3(0, 0, 0);
+			particleSystem2.direction1 = new BABYLON.Vector3(0, 0, 0);
+			particleSystem2.direction2 = new BABYLON.Vector3(0, 0, 0);
+			particleSystem2.minEmitBox = new BABYLON.Vector3(-100, 0, -100);
+			particleSystem2.maxEmitBox = new BABYLON.Vector3(100, 0, 100);
+			particleSystem2.color1 = new BABYLON.Color4(0.1, 0.1, 0.1, 0.08);
+			particleSystem2.color2 = new BABYLON.Color4(0.1, 0.1, 0.1, 0.3);
+			particleSystem2.colorDead = new BABYLON.Color4(0.01, 0.01, 0.01, 0.01);
+			particleSystem2.start();
+
+
+			// ----------------------------------------------------------------
+			// other raindrop particles (around farm house)
+			// Emitters
+			var emitter3 = BABYLON.Mesh.CreateBox("emitter3", 0.1, scene);
+			emitter3.isVisible = false;
+			emitter3.position.y = 14.0;
+			// Particles
+			var particleSystem3 = new BABYLON.ParticleSystem("particles3", 400, scene);
+			particleSystem3.particleTexture = new BABYLON.Texture("../assets/RainDrop_Egg.png", scene);
+			particleSystem3.minAngularSpeed = 0;
+			particleSystem3.maxAngularSpeed = 0;
+			particleSystem3.minSize = 0.2;
+			particleSystem3.maxSize = 0.4;
+			particleSystem3.minLifeTime = 2.0;
+			particleSystem3.maxLifeTime = 2.0;
+			particleSystem3.minEmitPower = 1.2;
+			particleSystem3.maxEmitPower = 1.8;
+			particleSystem3.updateSpeed = 0.01;
+			particleSystem3.emitter = emitter3;
+			particleSystem3.emitRate = 150;
+			particleSystem3.blendMode = BABYLON.ParticleSystem.BLENDMODE_ONEONE;
+			particleSystem3.minEmitBox = new BABYLON.Vector3(10, 0, -10);
+			particleSystem3.maxEmitBox = new BABYLON.Vector3(12, 0, 30);
+			particleSystem3.direction1 = new BABYLON.Vector3(0, -1, 0);
+			particleSystem3.direction2 = new BABYLON.Vector3(0, -1, 0);
+			particleSystem3.color1 = new BABYLON.Color4(0.2, 0.2, 0.2, 0.2);
+			particleSystem3.color2 = new BABYLON.Color4(0.4, 0.4, 0.4, 0.3);
+			particleSystem3.colorDead = new BABYLON.Color4(0.1, 0.1, 0.1, 0.1);
+			particleSystem3.gravity = new BABYLON.Vector3(0, -50.0, 0);
+			particleSystem3.start();
+
+			// Emitters
+			// var emitter4 = BABYLON.Mesh.CreateBox("emitter4", 0.1, scene);
+			// emitter4.isVisible = false;
+			// emitter4.position.y = 10.0;
+			// Particles
+			var particleSystem4 = new BABYLON.ParticleSystem("particles4", 400, scene);
+			particleSystem4.particleTexture = new BABYLON.Texture("../assets/RainDrop_Egg.png", scene);
+			particleSystem4.minAngularSpeed = 0;
+			particleSystem4.maxAngularSpeed = 0;
+			particleSystem4.minSize = 0.2;
+			particleSystem4.maxSize = 0.4;
+			particleSystem4.minLifeTime = 2.0;
+			particleSystem4.maxLifeTime = 2.0;
+			particleSystem4.minEmitPower = 1.2;
+			particleSystem4.maxEmitPower = 1.8;
+			particleSystem4.updateSpeed = 0.01;
+			particleSystem4.emitter = emitter3;
+			particleSystem4.emitRate = 150;
+			particleSystem4.blendMode = BABYLON.ParticleSystem.BLENDMODE_ONEONE;
+			particleSystem4.minEmitBox = new BABYLON.Vector3(-12, 0, -10);
+			particleSystem4.maxEmitBox = new BABYLON.Vector3(-10, 0, 30);
+			particleSystem4.direction1 = new BABYLON.Vector3(0, -1, 0);
+			particleSystem4.direction2 = new BABYLON.Vector3(0, -1, 0);
+			particleSystem4.color1 = new BABYLON.Color4(0.2, 0.2, 0.2, 0.2);
+			particleSystem4.color2 = new BABYLON.Color4(0.4, 0.4, 0.4, 0.3);
+			particleSystem4.colorDead = new BABYLON.Color4(0.1, 0.1, 0.1, 0.1);
+			particleSystem4.gravity = new BABYLON.Vector3(0, -50.0, 0);
+			particleSystem4.start();
+
+
+			// Emitters
+			var emitter5 = BABYLON.Mesh.CreateBox("emitter5", 0.1, scene);
+			emitter5.isVisible = false;
+			emitter5.position.y = 15.2;
+			// Particles
+			var particleSystem5 = new BABYLON.ParticleSystem("particles5", 150, scene);
+			particleSystem5.particleTexture = new BABYLON.Texture("../assets/RainDrop_Egg.png", scene);
+			particleSystem5.minAngularSpeed = 0;
+			particleSystem5.maxAngularSpeed = 0;
+			particleSystem5.minSize = 0.1;
+			particleSystem5.maxSize = 0.3;
+			particleSystem5.minLifeTime = 2.0;
+			particleSystem5.maxLifeTime = 2.0;
+			particleSystem5.minEmitPower = 0.8;
+			particleSystem5.maxEmitPower = 1.0;
+			particleSystem5.updateSpeed = 0.005;
+			particleSystem5.emitter = emitter5;
+			particleSystem5.emitRate = 60;
+			particleSystem5.blendMode = BABYLON.ParticleSystem.BLENDMODE_ONEONE;
+			particleSystem5.minEmitBox = new BABYLON.Vector3(-10, 0, -18);
+			particleSystem5.maxEmitBox = new BABYLON.Vector3(10 , 0, -9.5);
+			particleSystem5.direction1 = new BABYLON.Vector3(0, -1, 0);
+			particleSystem5.direction2 = new BABYLON.Vector3(0, -1, 0);
+			particleSystem5.color1 = new BABYLON.Color4(0.2, 0.2, 0.2, 0.1);
+			particleSystem5.color2 = new BABYLON.Color4(0.3, 0.3, 0.3, 0.25);
+			particleSystem5.colorDead = new BABYLON.Color4(0.1, 0.1, 0.1, 0.1);
+			particleSystem5.gravity = new BABYLON.Vector3(0, -70.0, 0);
+			particleSystem5.start();
+
+			// Emitters
+			var emitter6 = BABYLON.Mesh.CreateBox("emitter6", 1.0, scene);
+			emitter6.isVisible = false;
+			emitter6.position.y = 4.75;
+			// particle 2 
+			var particleSystem6 = new BABYLON.ParticleSystem("particles6", 800, scene, null, true);
+			particleSystem6.particleTexture = new BABYLON.Texture("../assets/raindrop_splash.png", scene, true, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
+			particleSystem6.startSpriteCellID = 0;
+			particleSystem6.endSpriteCellID = 19;
+			particleSystem6.spriteCellWidth = 84;
+			particleSystem6.spriteCellHeight = 56;
+			particleSystem6.spriteCellLoop = false;
+			particleSystem6.spriteCellChangeSpeed = 1.0; // default is 1.0
+			particleSystem6.minEmitPower = 1.2;
+			particleSystem6.maxEmitPower = 1.5;
+			particleSystem6.emitter = emitter6;
+			particleSystem6.emitRate = 80;
+			particleSystem6.blendMode = BABYLON.ParticleSystem.BLENDMODE_ONEONE;
+			//particleSystem2.blendMode = BABYLON.ParticleSystem.BLENDMODE_STANDARD;
+			particleSystem6.updateSpeed = 0.015;
+			particleSystem6.minLifeTime = 1.0;
+			particleSystem6.maxLifeTime = 1.0;
+			particleSystem6.minSize = 0.6;
+			particleSystem6.maxSize = 1.1;
+			particleSystem6.gravity = new BABYLON.Vector3(0, 0, 0);
+			particleSystem6.direction1 = new BABYLON.Vector3(0, 0, 0);
+			particleSystem6.direction2 = new BABYLON.Vector3(0, 0, 0);
+			particleSystem6.minEmitBox = new BABYLON.Vector3(-14, 0, -35);
+			particleSystem6.maxEmitBox = new BABYLON.Vector3(25, 0, 35);
+			particleSystem6.color1 = new BABYLON.Color4(0.1, 0.1, 0.1, 0.08);
+			particleSystem6.color2 = new BABYLON.Color4(0.1, 0.1, 0.1, 0.3);
+			particleSystem6.colorDead = new BABYLON.Color4(0.01, 0.01, 0.01, 0.01);
+			particleSystem6.start();
+
+
+
+			// ----------------------------------------------------------------
+			// Rain Ambient Sound
+			var rainMusic = new BABYLON.Sound("RainSound", "../../assets/rain_nature2.wav", scene, null, { loop: true, autoplay: true });
+			rainMusic.setVolume(0.6);
+
+			// Load the sound and play it automatically once ready
+			var lightingSound = new BABYLON.Sound("lightingSound", "../assets/thunder_strike_1.mp3", scene, null, { loop: false, autoplay: false });
+
+			// ----------------------------------------------------------------
+			// Lighting animation 
+			var frameRate = 100.0;
+            var totalFrameNumber = 800.0;
+			var originAmbientIntensity = 0.25;
+
+            // construct lights intensity keys
+            var intensityKeys = [
+				{ frame: 0, value: originAmbientIntensity },
+
+				{ frame: 0.08 * totalFrameNumber - 12, value: originAmbientIntensity },
+				{ frame: 0.08 * totalFrameNumber - 10, value: 1.0 },
+				{ frame: 0.08 * totalFrameNumber - 6, value: 0.6 },
+				{ frame: 0.08 * totalFrameNumber - 2, value: 0.25 },
+                { frame: 0.08 * totalFrameNumber, value: 1.35 },
+				{ frame: 0.08 * totalFrameNumber + 6, value: 0.2 },
+				{ frame: 0.08 * totalFrameNumber + 8, value: 1.25 },
+				{ frame: 0.08 * totalFrameNumber + 10, value: 0.4 },
+				{ frame: 0.08 * totalFrameNumber + 12, value: 0.85 },
+				{ frame: 0.08 * totalFrameNumber + 24, value: 0.8 },
+				{ frame: 0.08 * totalFrameNumber + 32, value: originAmbientIntensity },
+
+				{ frame: 0.15 * totalFrameNumber, value: originAmbientIntensity },
+				{ frame: 0.15 * totalFrameNumber + 1, value: 1.0 },
+				{ frame: 0.15 * totalFrameNumber + 3, value: 1.2 },
+				{ frame: 0.15 * totalFrameNumber + 10, value: 1.3 },
+				{ frame: 0.15 * totalFrameNumber + 15, value: 0.8 },
+				{ frame: 0.15 * totalFrameNumber + 18, value: 0.75 },
+				{ frame: 0.15 * totalFrameNumber + 25, value: originAmbientIntensity },
+
+				{ frame: 0.3 * totalFrameNumber, value: originAmbientIntensity },
+
+				{ frame: 0.65 * totalFrameNumber - 2, value: originAmbientIntensity },
+				{ frame: 0.65 * totalFrameNumber + 8 , value: 0.65 },
+				{ frame: 0.65 * totalFrameNumber + 18, value: 0.89 },
+				{ frame: 0.75 * totalFrameNumber, value: 0.36 },
+				{ frame: 0.8 * totalFrameNumber, value: originAmbientIntensity },
+
+				{ frame: totalFrameNumber, value: originAmbientIntensity },
+			];
+
+
+			// construct sky material luminance  keys
+			var originLuminance = 1.0;
+            var luminanceKeys = [
+				{ frame: 0, value: originLuminance },
+
+				{ frame: 0.08 * totalFrameNumber - 12, value: originLuminance },
+				{ frame: 0.08 * totalFrameNumber - 10, value: 0.2 },
+				{ frame: 0.08 * totalFrameNumber - 6, value: 0.34 },
+				{ frame: 0.08 * totalFrameNumber - 2, value: 0.95 },
+                { frame: 0.08 * totalFrameNumber, value: 0.19 },
+				{ frame: 0.08 * totalFrameNumber + 6, value: 0.9 },
+				{ frame: 0.08 * totalFrameNumber + 8, value: 0.21 },
+				{ frame: 0.08 * totalFrameNumber + 10, value: 0.76 },
+				{ frame: 0.08 * totalFrameNumber + 12, value: 0.45 },
+				{ frame: 0.08 * totalFrameNumber + 24, value: 0.21 },
+				{ frame: 0.08 * totalFrameNumber + 32, value: originLuminance },
+
+				{ frame: 0.15 * totalFrameNumber, value: originLuminance },
+				{ frame: 0.15 * totalFrameNumber + 1, value: 0.20 },
+				{ frame: 0.15 * totalFrameNumber + 3, value: 0.28 },
+				{ frame: 0.15 * totalFrameNumber + 10, value: 0.35 },
+				{ frame: 0.15 * totalFrameNumber + 15, value: 0.45 },
+				{ frame: 0.15 * totalFrameNumber + 18, value: 0.65 },
+				{ frame: 0.15 * totalFrameNumber + 25, value: originLuminance },
+
+				{ frame: 0.3 * totalFrameNumber, value: originLuminance },
+
+				{ frame: 0.65 * totalFrameNumber - 2, value: originLuminance },
+				{ frame: 0.65 * totalFrameNumber + 8, value: 0.34 },
+				{ frame: 0.65 * totalFrameNumber + 18, value: 0.25 },
+				{ frame: 0.75 * totalFrameNumber, value: 0.73 },
+				{ frame: 0.8 * totalFrameNumber, value: originLuminance },
+
+				{ frame: totalFrameNumber, value: originLuminance },
+			];
+
+
+
+			// var AlphaKeys = [
+			// 	{ frame: 0, value: 0.0 },
+
+			// 	{ frame: 0.5 * totalFrameNumber - 12, value: 0.0 },
+			// 	{ frame: 0.5 * totalFrameNumber - 10, value: 1.0 },
+			// 	{ frame: 0.5 * totalFrameNumber - 6, value: 0.6 },
+			// 	{ frame: 0.5 * totalFrameNumber - 2, value: 0.25 },
+            //     { frame: 0.5 * totalFrameNumber, value: 1.35 },
+			// 	{ frame: 0.5 * totalFrameNumber + 6, value: 0.2 },
+			// 	{ frame: 0.5 * totalFrameNumber + 8, value: 1.0 },
+			// 	{ frame: 0.5 * totalFrameNumber + 10, value: 0.4 },
+			// 	{ frame: 0.5 * totalFrameNumber + 12, value: 0.85 },
+			// 	{ frame: 0.5 * totalFrameNumber + 24, value: 0.8 },
+			// 	{ frame: 0.5 * totalFrameNumber + 30, value: 0.0 },
+
+			// 	{ frame: 0.8 * totalFrameNumber, value: 0.0 },
+			// 	{ frame: 0.8 * totalFrameNumber + 1, value: 1.0 },
+			// 	{ frame: 0.8 * totalFrameNumber + 3, value: 1.2 },
+			// 	{ frame: 0.8 * totalFrameNumber + 10, value: 1.3 },
+			// 	{ frame: 0.8 * totalFrameNumber + 15, value: 0.8 },
+			// 	{ frame: 0.8 * totalFrameNumber + 18, value: 0.75 },
+			// 	{ frame: 0.8 * totalFrameNumber + 20, value: 0.0 },
+
+			// 	{ frame: totalFrameNumber, value: 0.0 },
+            // ];
+            
+            var AmbientAnimation = new BABYLON.Animation("AmbientAnimation", "intensity", frameRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+            AmbientAnimation.setKeys(intensityKeys);
+            ambient.animations = [AmbientAnimation];
+
+			var LuminanceAnimation = new BABYLON.Animation("LuminanceAnimation", "luminance", frameRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+            LuminanceAnimation.setKeys(luminanceKeys);
+            skyboxMaterial.animations = [LuminanceAnimation];
+
+
+			// var AplhaAnimation = new BABYLON.Animation("AlphaAnimation", "material.alpha", frameRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+            // AplhaAnimation.setKeys(AlphaKeys);
+			// thunder.animations = [AplhaAnimation]
+
+			
+			// ----------------------------------------------------------------
+			// Register a render loop to repeatedly render the scene
+
+			// // seems not working...
+			// loader.onFinish = function() {
+			// 	engine.runRenderLoop(function () {
+			// 		scene.render();
+			// 		divFps.innerHTML = engine.getFps().toFixed() + " fps";
+			// 	});
+			// };
+	
+			engine.runRenderLoop(function () {
+				scene.render();
+				divFps.innerHTML = engine.getFps().toFixed() + " fps";
+			});
+
+			// Resize
+			window.addEventListener("resize", function () {
+				engine.resize();
+			});
+
+			// ----------------------------------------------------------------
+			// Fog
+			scene.fogMode = BABYLON.Scene.FOGMODE_EXP;
+			scene.fogDensity = 0.0008;
+			scene.fogColor = new BABYLON.Color3(0.25, 0.25, 0.25);
+
+			// ----------------------------------------------------------------
+			// Post processing
+			
+			// bloom
+			var blurWidth = 10.0;
+			var postProcess0 = new BABYLON.PassPostProcess("Scene copy", 1.0, camera);
+			var postProcess1 = new BABYLON.PostProcess("Down sample", "../assets/postprocesses/downsample", ["screenSize", "highlightThreshold"], null, 0.25, camera, BABYLON.Texture.BILINEAR_SAMPLINGMODE);
+			postProcess1.onApply = function (effect) {
+				effect.setFloat2("screenSize", postProcess1.width, postProcess1.height);
+				effect.setFloat("highlightThreshold", 0.95);
+			};
+			var postProcess2 = new BABYLON.BlurPostProcess("Horizontal blur", new BABYLON.Vector2(1.0, 0), blurWidth, 0.25, camera);
+			var postProcess3 = new BABYLON.BlurPostProcess("Vertical blur", new BABYLON.Vector2(0, 1.0), blurWidth, 0.25, camera);
+			var postProcess4 = new BABYLON.PostProcess("Final compose", "../assets/postprocesses/compose", ["sceneIntensity", "glowIntensity", "highlightIntensity"], ["sceneSampler"], 1, camera);
+			postProcess4.onApply = function (effect) {
+				effect.setTextureFromPostProcess("sceneSampler", postProcess0);
+				effect.setFloat("sceneIntensity", 0.5);
+				effect.setFloat("glowIntensity", 0.4);
+				effect.setFloat("highlightIntensity", 1.0);
+			};
+
+			// weather post processing
+			var rainPostProcess = new BABYLON.rainPostProcess("rain",1.0, camera);
+            var frostPostProcess = new BABYLON.frostPostProcess("frost","frost3.jpg", 1.0, camera);
+
+
+			// ----------------------------------------------------------------
+			// // Debug GUI (affected by post processing)
+			// var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+			// advancedTexture.idealHeight = 1100;
+
+			// var panel = new BABYLON.GUI.StackPanel();
+			// panel.width = "300px";
+			// panel.isVertical = true;
+			// panel.paddingRight = "20px";
+			// panel.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+			// panel.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+			// panel.fontSize = 16;
+			// advancedTexture.addControl(panel);
+
+			// var getPropertyPath = function(property) {
+			// 	//return godrays[property];
+			// 	return skyboxMaterial[property];
+			// }
+
+			// var setPropertyPath = function(property, value) {
+			// 	//godrays[property] = value;
+			// 	skyboxMaterial[property] = value;
+			// }    
+
+			// var addSlider = function(text, property, min, max, left, panel, top) {
+			// 	var topPanel = new BABYLON.GUI.StackPanel();        
+			// 	topPanel.height = "30px";
+			// 	topPanel.isVertical = false;
+			// 	panel.addControl(topPanel);    
+
+			// 	var header = new BABYLON.GUI.TextBlock();
+			// 	header.text = text;
+			// 	header.width = "150px";
+			// 	header.color = "white";
+			// 	header.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+			// 	topPanel.addControl(header); 
+			// 	if (left) {
+			// 		header.left = left;
+			// 	}
+
+			// 	var valueHeader = new BABYLON.GUI.TextBlock();
+			// 	valueHeader.text = getPropertyPath(property).toFixed(2);
+			// 	valueHeader.width = "100px";
+			// 	valueHeader.color = "white";
+			// 	valueHeader.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+			// 	topPanel.addControl(valueHeader);            
+
+			// 	var slider = new BABYLON.GUI.Slider();
+			// 	slider.minimum = min;
+			// 	slider.maximum = max;
+			// 	slider.height = "20px";
+			// 	slider.color = "green";
+			// 	slider.background = "white";
+			// 	slider.onSync = function() {
+			// 		slider.value = getPropertyPath(property);
+			// 	}
+			// 	slider.onSync();
+			// 	slider.onValueChangedObservable.add(function(value) {
+			// 		valueHeader.text = value.toFixed(2);
+			// 		setPropertyPath(property, value);
+			// 	});
+
+			// 	if (left) {
+			// 		slider.paddingLeft = left;
+			// 	}
+
+			// 	panel.addControl(slider);  
+			// 	return slider;
+			// }
+			
+			// var addButton = function(text, func, left, panel) {
+            //     var button = BABYLON.GUI.Button.CreateSimpleButton("button", text);
+            //     button.height = "30px";
+            //     button.width = "200px";
+            //     button.color = "white";
+            //     button.background = "green";
+            //     button.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+            //     button.onPointerDownObservable.add(function(){
+            //         func();
+            //     })
+            //     panel.addControl(button); 
+
+            //     if (left) {
+            //         button.left = left;
+            //     }
+            // } 
+
+
+			// var addSeparator = function(panel) {
+			// 	var rectangle = new BABYLON.GUI.Rectangle();
+			// 	rectangle.height = "15px";
+			// 	rectangle.thickness = 0;
+			// 	panel.addControl(rectangle); 
+			// }
+
+			// // raindrop debug
+			// addSlider("raindrop speed :", "raindropSpeed", 20.0, 50.0, "20px", panel);
+			// addSeparator(panel);
+			// addSlider("puddle amount :", "raindropPuddleAmount", 0.0, 6.0, "20px", panel); 
+			// addSeparator(panel);
+
+			// // lamp spot light debug
+			// addSlider("exposure :", "exposure", 0.0, 3.0, "20px", panel);
+			// addSeparator(panel);
+			// addSlider("decay :", "decay", 0.0, 3.0, "20px", panel); 
+			// addSeparator(panel);
+			// addSlider("weight :", "weight", 0.0, 3.0, "20px", panel);
+			// addSeparator(panel);
+			// addSlider("density :", "density", 0.0, 3.0, "20px", panel); 
+			// addSeparator(panel);
+
+			// // lighting debug
+            // addButton("Play Lighting", function() {
+			// 	//scene.beginAnimation(ambient, 0, totalFrameNumber, false);
+			// 	thunderLight.setEnabled(true);
+			// 	thunder.isVisible = true;
+			// 	scene.beginDirectAnimation(ambient, [AmbientAnimation], 0, totalFrameNumber, false, 1, turnOffThunder);
+			// 	scene.beginDirectAnimation(skyboxMaterial, [LuminanceAnimation], 0, totalFrameNumber, false, 1, turnOffThunder);
+			// 	//scene.beginDirectAnimation(thunder, [AplhaAnimation], 0, totalFrameNumber, false, 1, null);
+
+			// }, "20px", panel);
+			// addSeparator(panel);
+			
+			// // camera animation info get
+			// addButton("report camera", function() {
+			// 	console.log('camera radius', camera.radius);
+			// 	console.log('camera alpha', camera.alpha);
+			// 	console.log('camera beta', camera.beta);
+			// }, "20px", panel);
+			// addSeparator(panel);
+
+			// another sky material debug
+			// addSlider("Sky time :", "skyTime", 0, 6.28, "20px", panel);   
+            // addSeparator(panel);
+			
+			// addSlider("Sky turbidity :", "turbidity", 0, 25, "20px", panel);   
+            // addSeparator(panel);
+
+            // addSlider("Sky luminance :", "luminance", 0, 1.0, "20px", panel);   
+            // addSeparator(panel);
+
+
+			// ----------------------------------------------------------------
+			// camera animation
+			var camAnimationRate = 30.0;
+			var camAnimationTotalFrame = 1500.0;
+
+			var gcamera2 = new BABYLON.ArcRotateCamera("camera2", 5.1, 1.45, 69, camTarget, scene);
+			gcamera2.setTarget(camTarget);
+
+			var gcamera3 = new BABYLON.ArcRotateCamera("camera3", 5.1, 1.45, 49, camTarget, scene);
+			gcamera3.setTarget(camTarget);
+
+			var gcamera4 = new BABYLON.ArcRotateCamera("camera4", 7.52, 1.46, 108.88, camTarget, scene);
+			gcamera4.setTarget(camTarget);
+
+			var radiusAnimation = new BABYLON.Animation("camRadius", "radius", camAnimationRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+			var alphaAnimation = new BABYLON.Animation("camAlpha", "alpha", camAnimationRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+			var betaAnimation = new BABYLON.Animation("camBeta", "beta", camAnimationRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+
+			var keys1 = [
+			{
+				frame: 0,
+				value: camera.radius
+			}, 
+			{
+				frame : 0.25 * camAnimationTotalFrame,
+				value : gcamera2.radius
+			},
+			{
+				frame : 0.5 * camAnimationTotalFrame,
+				value : gcamera3.radius
+			},
+			{
+				frame : 0.75 * camAnimationTotalFrame,
+				value : gcamera3.radius
+			},
+			{
+				frame : camAnimationTotalFrame,
+				value : gcamera4.radius
+			}
+			];
+			
+			var keys2 = [
+			{
+				frame: 0,
+				value: camera.alpha
+			}, 
+			{
+				frame : 0.25 * camAnimationTotalFrame,
+				value : gcamera2.alpha
+			},
+			{
+				frame : 0.5 * camAnimationTotalFrame,
+				value : gcamera3.alpha
+			},
+			{
+				frame : 0.75 * camAnimationTotalFrame,
+				value : gcamera3.alpha
+			},
+			{
+				frame : camAnimationTotalFrame,
+				value : gcamera4.alpha
+			}
+			];
+			
+			var keys3 = [
+			{
+				frame: 0,
+				value: camera.beta
+			}, 
+			{
+				frame : 0.25 * camAnimationTotalFrame,
+				value : gcamera2.beta
+			},
+			{
+				frame : 0.5 * camAnimationTotalFrame,
+				value : gcamera3.beta
+			},
+			{
+				frame : 0.75 * camAnimationTotalFrame,
+				value : gcamera3.beta
+			},
+			{
+				frame : camAnimationTotalFrame,
+				value : gcamera4.beta
+			}
+			];
+				
+			radiusAnimation.setKeys(keys1);
+			alphaAnimation.setKeys(keys2);
+			betaAnimation.setKeys(keys3);
+			camera.animations.push(radiusAnimation);
+			camera.animations.push(alphaAnimation);
+			camera.animations.push(betaAnimation);
+
+
+			// ----------------------------------------------------------------
+			// adjust light intensity from high to low
+			var lightIntensityDimAnimation = new BABYLON.Animation("dim", "intensity", camAnimationRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+			var dimIntensityKeys = [
+				{ frame: 0, value: ambient.intensity },
+				{ frame: 0.15, value: ambient.intensity },
+				{ frame: 0.25 * camAnimationTotalFrame, value: originAmbientIntensity },
+			];
+			lightIntensityDimAnimation.setKeys(dimIntensityKeys);
+			ambient.animations.push(lightIntensityDimAnimation);
+
+
+			// ----------------------------------------------------------------
+			// lighting & thunder related functions
+			var turnOffThunder = function() {
+				//thunderLight.setEnabled(false);
+				//thunder.isVisible = false;
+			}
+
+			var startThunder = function() {
+				if(!lightingSound.isPlaying){
+					lightingSound.play();
+				}
+				scene.beginDirectAnimation(ambient, [AmbientAnimation], 0, totalFrameNumber, false, 1, turnOffThunder);
+				scene.beginDirectAnimation(skyboxMaterial, [LuminanceAnimation], 0, totalFrameNumber, false, 1, turnOffThunder);
+			}
+
+
+
+			// ----------------------------------------------------------------
+			// add keyboard event
+			window.addEventListener("keydown", function (evt) {
+				// L key
+				if (evt.keyCode === 76) {
+					startThunder();
+				}
+				// P key
+				else if(evt.keyCode === 80){
+					
+					// lighting / thundering every fixed time interval (25s now)
+					var handle = window.setInterval(() => {
+						//thunderLight.setEnabled(true);
+						//thunder.isVisible = true;
+
+						startThunder();
+					}, 15000);
+
+					scene.beginAnimation(ambient, 0, 0.25 * camAnimationTotalFrame, false, 1);
+					scene.beginAnimation(camera, 0, camAnimationTotalFrame, false, 1);
+				}
+
+				// R key
+				else if(evt.keyCode === 82){
+					ambient.intensity = 1.5;
+				}
+			});
+  
+
+		}
+	});
+
+	</script>
+</body>
+
+</html>

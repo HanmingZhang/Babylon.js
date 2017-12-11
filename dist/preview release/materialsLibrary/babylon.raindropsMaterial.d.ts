@@ -44,6 +44,8 @@ declare module BABYLON {
         protected _globalAmbientColor: Color3;
         raindropPuddleAmount: number;
         raindropSpeed: number;
+        raindropSize: number;
+        raindropRippleNormalIntensity: number;
         private _mesh;
         private _reflectionRTT;
         private _reflectionTransform;

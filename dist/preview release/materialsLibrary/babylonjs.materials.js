@@ -75,6 +75,8 @@ var BABYLON;
             */
             _this.raindropPuddleAmount = 2.0;
             _this.raindropSpeed = 25.0;
+            _this.raindropSize = 10.0;
+            _this.raindropRippleNormalIntensity = 1.0;
             /*
             * Private members
             */
@@ -293,7 +295,7 @@ var BABYLON;
                     "raindropMatrix", "diffuseMatrix", "groundHeightMatrix", "groundNormalMatrix", "waterNormalMatrix",
                     "logarithmicDepthConstant",
                     // Raindrop
-                    "worldReflectionViewProjection", "raindropPuddleAmount", "raindropSpeed", "time"
+                    "worldReflectionViewProjection", "raindropPuddleAmount", "raindropSpeed", "raindropSize", "raindropRippleNormalIntensity", "time"
                 ];
                 var samplers = ["diffuseSampler", "raindropSampler", "reflectionSampler", "groundHeightSampler", "groundNormalSampler", "waterNormalSampler"];
                 // var uniformBuffers = ["Material", "Scene"];
@@ -339,7 +341,6 @@ var BABYLON;
             // Matrices        
             this.bindOnlyWorldMatrix(world);
             this._activeEffect.setMatrix("viewProjection", scene.getTransformMatrix());
-            //let mustRebind = this._mustRebind(scene, effect, mesh.visibility);
             var mustRebind = this._mustRebind(scene, effect);
             // Bones
             BABYLON.MaterialHelper.BindBonesParameters(mesh, this._activeEffect);
@@ -409,6 +410,8 @@ var BABYLON;
             effect.setFloat("time", this._lastTime / 100000);
             effect.setFloat("raindropPuddleAmount", this.raindropPuddleAmount);
             effect.setFloat("raindropSpeed", this.raindropSpeed);
+            effect.setFloat("raindropSize", this.raindropSize);
+            effect.setFloat("raindropRippleNormalIntensity", this.raindropRippleNormalIntensity);
             this._afterBind(mesh, this._activeEffect);
         };
         RaindropsMaterial.prototype._createRenderTargets = function (scene, renderTargetSize) {
@@ -616,8 +619,8 @@ var BABYLON;
 
 //# sourceMappingURL=babylon.raindropsMaterial.js.map
 
-BABYLON.Effect.ShadersStore['raindropsVertexShader'] = "precision highp float;\n\nattribute vec3 position;\n#ifdef NORMAL\nattribute vec3 normal;\n#endif\n#ifdef UV1\nattribute vec2 uv;\n#endif\n#ifdef UV2\nattribute vec2 uv2;\n#endif\n#ifdef VERTEXCOLOR\nattribute vec4 color;\n#endif\nuniform mat4 worldReflectionViewProjection;\nuniform mat4 viewProjection;\n#include<helperFunctions>\n#include<bonesDeclaration>\n\n#include<instancesDeclaration>\n\n\n\n\n\n\n#if defined(DIFFUSE)\nvarying vec2 vDiffuseUV;\n#endif\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n#if defined(BUMP)\nvarying vec2 vBumpUV;\n#endif\n\nvarying vec3 vPositionW;\n#ifdef NORMAL\nvarying vec3 vNormalW;\n#endif\n#ifdef VERTEXCOLOR\nvarying vec4 vColor;\n#endif\n#include<bumpVertexDeclaration>\n#include<clipPlaneVertexDeclaration>\n#include<fogVertexDeclaration>\n#include<__decl__lightFragment>[0..maxSimultaneousLights]\n\n\n\n\n\n\n\n\nuniform float time;\nuniform mat4 raindropMatrix;\nvarying vec2 vRaindropUV;\nuniform mat4 groundHeightMatrix;\nvarying vec2 vRaindropGroundHeightUV;\nuniform mat4 groundNormalMatrix;\nvarying vec2 vRaindropGroundNormalUV;\nuniform mat4 waterNormalMatrix;\nvarying vec2 vRaindropWaterNormalUV;\n#ifdef DIFFUSE\nuniform mat4 diffuseMatrix;\nuniform vec2 vDiffuseInfos;\n#endif\n#ifdef REFLECTION\n\nvarying vec3 vPosition;\nvarying vec3 vReflectionMapTexCoord;\n#endif\n#include<logDepthDeclaration>\nvoid main(void) {\n\n\n\n\n\n\n\n\n\n\n\n#include<instancesVertex>\n#include<bonesVertex>\ngl_Position=viewProjection*finalWorld*vec4(position,1.0);\nvec4 worldPos=finalWorld*vec4(position,1.0);\nvPositionW=vec3(worldPos);\n#ifdef NORMAL\nvNormalW=normalize(vec3(finalWorld*vec4(normal,0.0)));\n#endif\n\n\n\n\n#ifndef UV1\nvec2 uv=vec2(0.,0.);\n#endif\n#ifndef UV2\nvec2 uv2=vec2(0.,0.);\n#endif\n\n\n\n\n\n\n#if defined(DIFFUSE)\nif (vDiffuseInfos.x == 0.)\n{\nvDiffuseUV=vec2(diffuseMatrix*vec4(uv,1.0,0.0));\n}\nelse\n{\nvDiffuseUV=vec2(diffuseMatrix*vec4(uv2,1.0,0.0));\n}\n#endif\n#if defined(BUMP)\nif (vBumpInfos.x == 0.)\n{\nvBumpUV=vec2(bumpMatrix*vec4(uv,1.0,0.0));\n}\nelse\n{\nvBumpUV=vec2(bumpMatrix*vec4(uv2,1.0,0.0));\n}\n#endif\nvRaindropUV=vec2(raindropMatrix*vec4(uv,1.0,0.0));\nvRaindropGroundHeightUV=vec2(groundHeightMatrix*vec4(uv,1.0,0.0));\nvRaindropGroundNormalUV=vec2(groundNormalMatrix*vec4(uv,1.0,0.0));\nfloat raindropWaterNormalUVScale=12.0;\nvRaindropWaterNormalUV=vec2(waterNormalMatrix*vec4((uv*raindropWaterNormalUVScale)+time*vec2(10.0,10.0),1.0,0.0));\n#include<bumpVertex>\n#include<clipPlaneVertex>\n#include<fogVertex>\n#include<shadowsVertex>[0..maxSimultaneousLights]\n#ifdef VERTEXCOLOR\n\nvColor=color;\n#endif\n#include<pointCloudVertex>\n#ifdef REFLECTION\n\nvPosition=position;\nworldPos=worldReflectionViewProjection*vec4(position,1.0);\nvReflectionMapTexCoord.x=0.5*(worldPos.w+worldPos.x);\nvReflectionMapTexCoord.y=0.5*(worldPos.w+worldPos.y);\nvReflectionMapTexCoord.z=worldPos.w;\n#endif\n#include<logDepthVertex>\n}";
-BABYLON.Effect.ShadersStore['raindropsPixelShader'] = "#ifdef LOGARITHMICDEPTH\n#extension GL_EXT_frag_depth : enable\n#endif\nprecision highp float;\nuniform vec3 vEyePosition;\nuniform vec3 vAmbientColor;\nuniform vec4 vDiffuseColor;\nuniform vec4 vSpecularColor;\n\nvarying vec3 vPositionW;\n#ifdef NORMAL\nvarying vec3 vNormalW;\n#endif\n#ifdef VERTEXCOLOR\nvarying vec4 vColor;\n#endif\n\n#include<helperFunctions>\n\n#include<__decl__lightFragment>[0..maxSimultaneousLights]\n#include<lightsFragmentFunctions>\n#include<shadowsFragmentFunctions>\n\n#ifdef DIFFUSE\nvarying vec2 vDiffuseUV;\nuniform sampler2D diffuseSampler;\nuniform mat4 diffuseMatrix;\nuniform vec2 vDiffuseInfos;\n#endif\n\n#ifdef REFLECTION\nuniform sampler2D reflectionSampler;\nvarying vec3 vReflectionMapTexCoord;\nvarying vec3 vPosition;\n#endif\n#include<bumpFragmentFunctions>\n#include<clipPlaneFragmentDeclaration>\n#include<logDepthDeclaration>\n#include<fogFragmentDeclaration>\nuniform sampler2D raindropSampler;\nvarying vec2 vRaindropUV;\nuniform sampler2D groundHeightSampler;\nvarying vec2 vRaindropGroundHeightUV;\nuniform sampler2D groundNormalSampler;\nvarying vec2 vRaindropGroundNormalUV;\nuniform sampler2D waterNormalSampler;\nvarying vec2 vRaindropWaterNormalUV;\nuniform float time;\nuniform float raindropPuddleAmount;\nuniform float raindropSpeed;\n\nvec4 flipBookEffect(float inputAnimationPhase,float rows,float columns,vec2 uv){\nfloat fractPart=fract(inputAnimationPhase);\nvec2 fractPartVec2=vec2(fractPart,fractPart);\nvec2 tmpVec2=vec2(columns,rows);\nvec2 tmp2Vec2=vec2(columns*rows,rows);\nvec2 fractResultVec2=tmp2Vec2*fractPartVec2;\nfractResultVec2=floor(fractResultVec2);\n\nvec2 resultUV=(uv/tmpVec2)+(fractResultVec2/tmpVec2);\n\nresultUV.y=1.0-resultUV.y;\nreturn texture2D(raindropSampler,resultUV);\n}\n\n\n\n\n\n\n\n\nvoid main(void) {\n#include<clipPlaneFragment>\nvec3 viewDirectionW=normalize(vEyePosition-vPositionW);\n\nvec4 baseColor=vec4(1.,1.,1.,1.);\nvec3 diffuseColor=vDiffuseColor.rgb;\n\nfloat alpha=vDiffuseColor.a;\n\n\n\n\nfloat raindropsTimeScale=raindropSpeed;\n\n\n\nfloat raindropsUVScale=2.0;\nvec2 inputUV=vec2(1.0-vRaindropUV.x,vRaindropUV.y);\n\n\nvec4 raindropsNormal=flipBookEffect(raindropsTimeScale*time,8.0,8.0,fract(raindropsUVScale*inputUV));\n\nfloat raindropsNormalIntensity=5.0;\nraindropsNormal.x*=raindropsNormalIntensity;\nraindropsNormal.y*=raindropsNormalIntensity;\n\n\n\n\nbaseColor=raindropsNormal;\n\n\nfloat puddleNoiseScale=0.02;\n\nfloat noiseValue=texture2D(groundHeightSampler,puddleNoiseScale*(vRaindropGroundHeightUV)).r;\n\n\n\n\nfloat puddleAmount=raindropPuddleAmount;\nfloat noiseResult=pow(noiseValue*puddleAmount,20.0);\n\nnoiseResult=noiseResult*texture2D(groundHeightSampler,(vRaindropGroundHeightUV)).r;\nnoiseResult=clamp(noiseResult,0.0,1.0);\n\nvec3 groundNormalCol=texture2D(groundNormalSampler,vRaindropGroundNormalUV).rgb;\nvec3 normalW=normalize(vNormalW);\n\nnormalW.r=mix(normalW.r,groundNormalCol.r,noiseResult);\nnormalW.g=mix(normalW.g,groundNormalCol.g,noiseResult);\nnormalW.b=mix(normalW.b,groundNormalCol.b,noiseResult);\n\nnormalW=normalize(normalW);\n\nvec3 waterNormalCol=texture2D(waterNormalSampler,vRaindropWaterNormalUV).rgb;\nwaterNormalCol=normalize(waterNormalCol);\nnormalW=normalW+waterNormalCol;\nnormalW=normalize(normalW);\n\n\nnormalW=normalW+normalize(raindropsNormal.rgb);\n\nnormalW=normalize(normalW);\n#ifdef VERTEXCOLOR\nbaseColor.rgb*=vColor.rgb;\n#endif\n\nfloat bumpHeight=1.2;\n#ifdef NORMAL\n\nvec2 perturbation=bumpHeight*(normalW.rg-0.5);\n\n#else\nvec2 perturbation=bumpHeight*(vec2(1.0,1.0)-0.5);\nnormalW=normalize(-cross(dFdx(vPositionW),dFdy(vPositionW)));\n#endif\n#include<bumpFragment>\n\n\n#ifdef DIFFUSE\n\nbaseColor=texture2D(diffuseSampler,vDiffuseUV);\n#ifdef ALPHATEST\nif (baseColor.a<0.4)\ndiscard;\n#endif\n#ifdef ALPHAFROMDIFFUSE\nalpha*=baseColor.a;\n#endif\nbaseColor.rgb*=vDiffuseInfos.y;\n#endif\n\nvec3 refractionColor=vec3(0.,0.,0.);\n\n\n\nvec3 reflectionColor=vec3(0.,0.,0.);\n#ifdef REFLECTION\nfloat colorBlendFactor=0.8;\n\nvec3 eyeVector=normalize(vEyePosition-vPosition);\nvec4 waterColor=vec4(0.28,0.28,0.28,1.0);\nvec4 refractiveColor=vec4(0.0,0.0,0.0,1.0);\n\n\nvec2 projectedReflectionTexCoords=clamp(vReflectionMapTexCoord.xy/vReflectionMapTexCoord.z+perturbation,0.0,1.0);\nvec4 reflectiveColor=texture2D(reflectionSampler,projectedReflectionTexCoords);\n\n\n\n\n\n#endif\n#include<depthPrePass>\n#ifdef VERTEXCOLOR\nbaseColor.rgb*=vColor.rgb;\n#endif\n\n#ifdef SPECULARTERM\nfloat glossiness=vSpecularColor.a;\nvec3 specularColor=vSpecularColor.rgb;\n#ifdef SPECULAR\nvec4 specularMapColor=texture2D(specularSampler,vSpecularUV+uvOffset);\nspecularColor=specularMapColor.rgb;\n#ifdef GLOSSINESS\nglossiness=glossiness*specularMapColor.a;\n#endif\n#endif\n#else\nfloat glossiness=0.;\n#endif\n\nvec3 diffuseBase=vec3(0.,0.,0.);\nlightingInfo info;\n#ifdef SPECULARTERM\nvec3 specularBase=vec3(0.,0.,0.);\n#endif\nfloat shadow=1.;\n#include<lightFragment>[0..maxSimultaneousLights]\n#ifdef VERTEXALPHA\nalpha*=vColor.a;\n#endif\n\nvec3 finalDiffuse=clamp(diffuseBase*diffuseColor+vAmbientColor,0.0,1.0)*baseColor.rgb;\n\n#ifdef SPECULARTERM\nvec3 finalSpecular=specularBase*specularColor;\n#ifdef SPECULAROVERALPHA\nalpha=clamp(alpha+dot(finalSpecular,vec3(0.3,0.59,0.11)),0.,1.);\n#endif\n#else\nvec3 finalSpecular=vec3(0.0);\n#endif\n\n\nvec4 color=vec4(finalDiffuse+finalSpecular+(1.0-noiseResult)*colorBlendFactor*waterColor.rgb*reflectiveColor.rgb,alpha);\n\n#include<logDepthFragment>\n#include<fogFragment>\ngl_FragColor=color;\n\n\n}";
+BABYLON.Effect.ShadersStore['raindropsVertexShader'] = "precision highp float;\n\nattribute vec3 position;\n#ifdef NORMAL\nattribute vec3 normal;\n#endif\n#ifdef UV1\nattribute vec2 uv;\n#endif\n#ifdef UV2\nattribute vec2 uv2;\n#endif\n#ifdef VERTEXCOLOR\nattribute vec4 color;\n#endif\nuniform mat4 worldReflectionViewProjection;\nuniform mat4 view;\nuniform mat4 viewProjection;\n#include<helperFunctions>\n#include<bonesDeclaration>\n\n#include<instancesDeclaration>\n\n\n\n\n\n\n#if defined(DIFFUSE)\nvarying vec2 vDiffuseUV;\n#endif\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n#if defined(BUMP)\nvarying vec2 vBumpUV;\n#endif\n#ifdef POINTSIZE\nuniform float pointSize;\n#endif\n\nvarying vec3 vPositionW;\n#ifdef NORMAL\nvarying vec3 vNormalW;\n#endif\n#ifdef VERTEXCOLOR\nvarying vec4 vColor;\n#endif\n#include<bumpVertexDeclaration>\n#include<clipPlaneVertexDeclaration>\n#include<fogVertexDeclaration>\n#include<__decl__lightFragment>[0..maxSimultaneousLights]\n\n\n\n\n\n\n\n\nuniform float time;\nuniform mat4 raindropMatrix;\nvarying vec2 vRaindropUV;\nuniform mat4 groundHeightMatrix;\nvarying vec2 vRaindropGroundHeightUV;\nuniform mat4 groundNormalMatrix;\nvarying vec2 vRaindropGroundNormalUV;\nuniform mat4 waterNormalMatrix;\nvarying vec2 vRaindropWaterNormalUV;\n#ifdef DIFFUSE\nuniform mat4 diffuseMatrix;\nuniform vec2 vDiffuseInfos;\n#endif\n#ifdef REFLECTION\n\nvarying vec3 vPosition;\nvarying vec3 vReflectionMapTexCoord;\n#endif\n#include<logDepthDeclaration>\nvoid main(void) {\n\n\n\n\n\n\n\n\n\n\n\n#include<instancesVertex>\n#include<bonesVertex>\ngl_Position=viewProjection*finalWorld*vec4(position,1.0);\nvec4 worldPos=finalWorld*vec4(position,1.0);\nvPositionW=vec3(worldPos);\n#ifdef NORMAL\nvNormalW=normalize(vec3(finalWorld*vec4(normal,0.0)));\n#endif\n\n\n\n\n#ifndef UV1\nvec2 uv=vec2(0.,0.);\n#endif\n#ifndef UV2\nvec2 uv2=vec2(0.,0.);\n#endif\n\n\n\n\n\n\n#if defined(DIFFUSE)\nif (vDiffuseInfos.x == 0.)\n{\nvDiffuseUV=vec2(diffuseMatrix*vec4(uv,1.0,0.0));\n}\nelse\n{\nvDiffuseUV=vec2(diffuseMatrix*vec4(uv2,1.0,0.0));\n}\n#endif\n#if defined(BUMP)\nif (vBumpInfos.x == 0.)\n{\nvBumpUV=vec2(bumpMatrix*vec4(uv,1.0,0.0));\n}\nelse\n{\nvBumpUV=vec2(bumpMatrix*vec4(uv2,1.0,0.0));\n}\n#endif\nvRaindropUV=vec2(raindropMatrix*vec4(uv,1.0,0.0));\nvRaindropGroundHeightUV=vec2(groundHeightMatrix*vec4(uv,1.0,0.0));\nvRaindropGroundNormalUV=vec2(groundNormalMatrix*vec4(uv,1.0,0.0));\nfloat raindropWaterNormalUVScale=12.0;\nvRaindropWaterNormalUV=vec2(waterNormalMatrix*vec4((uv*raindropWaterNormalUVScale)+time*vec2(10.0,10.0),1.0,0.0));\n#include<bumpVertex>\n#include<clipPlaneVertex>\n#include<fogVertex>\n#include<shadowsVertex>[0..maxSimultaneousLights]\n#ifdef VERTEXCOLOR\n\nvColor=color;\n#endif\n#include<pointCloudVertex>\n\n#ifdef POINTSIZE\ngl_PointSize=pointSize;\n#endif\n#ifdef REFLECTION\n\nvPosition=position;\nworldPos=worldReflectionViewProjection*vec4(position,1.0);\nvReflectionMapTexCoord.x=0.5*(worldPos.w+worldPos.x);\nvReflectionMapTexCoord.y=0.5*(worldPos.w+worldPos.y);\nvReflectionMapTexCoord.z=worldPos.w;\n#endif\n#include<logDepthVertex>\n}";
+BABYLON.Effect.ShadersStore['raindropsPixelShader'] = "#ifdef LOGARITHMICDEPTH\n#extension GL_EXT_frag_depth : enable\n#endif\nprecision highp float;\nuniform vec3 vEyePosition;\nuniform vec3 vAmbientColor;\nuniform vec4 vDiffuseColor;\nuniform vec4 vSpecularColor;\n\nvarying vec3 vPositionW;\n#ifdef NORMAL\nvarying vec3 vNormalW;\n#endif\n#ifdef VERTEXCOLOR\nvarying vec4 vColor;\n#endif\n\n#include<helperFunctions>\n\n#include<__decl__lightFragment>[0..maxSimultaneousLights]\n#include<lightsFragmentFunctions>\n#include<shadowsFragmentFunctions>\n\n#ifdef DIFFUSE\nvarying vec2 vDiffuseUV;\nuniform sampler2D diffuseSampler;\nuniform mat4 diffuseMatrix;\nuniform vec2 vDiffuseInfos;\n#endif\n\n#ifdef REFLECTION\nuniform sampler2D reflectionSampler;\nvarying vec3 vReflectionMapTexCoord;\nvarying vec3 vPosition;\n#endif\n#include<bumpFragmentFunctions>\n#include<clipPlaneFragmentDeclaration>\n#include<logDepthDeclaration>\n#include<fogFragmentDeclaration>\nuniform sampler2D raindropSampler;\nvarying vec2 vRaindropUV;\nuniform sampler2D groundHeightSampler;\nvarying vec2 vRaindropGroundHeightUV;\nuniform sampler2D groundNormalSampler;\nvarying vec2 vRaindropGroundNormalUV;\nuniform sampler2D waterNormalSampler;\nvarying vec2 vRaindropWaterNormalUV;\nuniform float time;\nuniform float raindropPuddleAmount;\nuniform float raindropSpeed;\nuniform float raindropSize;\nuniform float raindropRippleNormalIntensity;\n\nvec4 flipBookEffect(float inputAnimationPhase,float rows,float columns,vec2 uv){\nfloat fractPart=fract(inputAnimationPhase);\nvec2 fractPartVec2=vec2(fractPart,fractPart);\nvec2 tmpVec2=vec2(columns,rows);\nvec2 tmp2Vec2=vec2(columns*rows,rows);\nvec2 fractResultVec2=tmp2Vec2*fractPartVec2;\nfractResultVec2=floor(fractResultVec2);\n\nvec2 resultUV=(uv/tmpVec2)+(fractResultVec2/tmpVec2);\n\nresultUV.y=1.0-resultUV.y;\nreturn texture2D(raindropSampler,resultUV);\n}\n\n\n\n\n\n\n\n\nvoid main(void) {\n#include<clipPlaneFragment>\nvec3 viewDirectionW=normalize(vEyePosition-vPositionW);\n\nvec4 baseColor=vec4(1.,1.,1.,1.);\nvec3 diffuseColor=vDiffuseColor.rgb;\n\nfloat alpha=vDiffuseColor.a;\n\n\n\nfloat raindropsTimeScale=raindropSpeed;\n\n\nfloat raindropsUVScale=12.0-min(max(2.0,raindropSize),10.0);\nvec2 inputUV=vec2(1.0-vRaindropUV.x,vRaindropUV.y);\n\n\nvec4 raindropsNormal=flipBookEffect(raindropsTimeScale*time,8.0,8.0,fract(raindropsUVScale*inputUV));\nraindropsNormal.x*=5.0;\nraindropsNormal.y*=5.0;\n\n\n\n\nbaseColor=raindropsNormal;\n\n\nfloat puddleNoiseScale=0.02;\n\nfloat noiseValue=texture2D(groundHeightSampler,puddleNoiseScale*(vRaindropGroundHeightUV)).r;\n\n\n\nfloat puddleAmount=raindropPuddleAmount;\nfloat noiseResult=pow(noiseValue*puddleAmount,20.0);\n\nnoiseResult=noiseResult*texture2D(groundHeightSampler,(vRaindropGroundHeightUV)).r;\nnoiseResult=clamp(noiseResult,0.0,1.0);\n\nvec3 groundNormalCol=texture2D(groundNormalSampler,vRaindropGroundNormalUV).rgb;\nvec3 normalW=normalize(vNormalW);\n\nnormalW.r=mix(normalW.r,groundNormalCol.r,noiseResult);\nnormalW.g=mix(normalW.g,groundNormalCol.g,noiseResult);\nnormalW.b=mix(normalW.b,groundNormalCol.b,noiseResult);\n\nnormalW=normalize(normalW);\n\nvec3 waterNormalCol=texture2D(waterNormalSampler,vRaindropWaterNormalUV).rgb;\nwaterNormalCol=normalize(waterNormalCol);\nnormalW=normalW+waterNormalCol;\nnormalW=normalize(normalW);\n\n\n\n\nfloat raindropsNormalIntensity=raindropRippleNormalIntensity;\nnormalW=normalW+raindropsNormalIntensity*normalize(raindropsNormal.rgb);\n\nnormalW=normalize(normalW);\n#ifdef VERTEXCOLOR\nbaseColor.rgb*=vColor.rgb;\n#endif\n\nfloat bumpHeight=1.2;\n#ifdef NORMAL\n\nvec2 perturbation=bumpHeight*(normalW.rg-0.5);\n\n#else\nvec2 perturbation=bumpHeight*(vec2(1.0,1.0)-0.5);\nnormalW=normalize(-cross(dFdx(vPositionW),dFdy(vPositionW)));\n#endif\n#include<bumpFragment>\n\n\n#ifdef DIFFUSE\n\nbaseColor=texture2D(diffuseSampler,vDiffuseUV);\n#ifdef ALPHATEST\nif (baseColor.a<0.4)\ndiscard;\n#endif\n#ifdef ALPHAFROMDIFFUSE\nalpha*=baseColor.a;\n#endif\nbaseColor.rgb*=vDiffuseInfos.y;\n#endif\n\nvec3 refractionColor=vec3(0.,0.,0.);\n\n\n\nvec3 reflectionColor=vec3(0.,0.,0.);\n#ifdef REFLECTION\nfloat colorBlendFactor=0.8;\n\nvec3 eyeVector=normalize(vEyePosition-vPosition);\nvec4 waterColor=vec4(0.28,0.28,0.28,1.0);\nvec4 refractiveColor=vec4(0.0,0.0,0.0,1.0);\n\n\nvec2 projectedReflectionTexCoords=clamp(vReflectionMapTexCoord.xy/vReflectionMapTexCoord.z+perturbation,0.0,1.0);\nvec4 reflectiveColor=texture2D(reflectionSampler,projectedReflectionTexCoords);\n\n\n\n\n\n#endif\n#include<depthPrePass>\n#ifdef VERTEXCOLOR\nbaseColor.rgb*=vColor.rgb;\n#endif\n\n#ifdef SPECULARTERM\nfloat glossiness=vSpecularColor.a;\nvec3 specularColor=vSpecularColor.rgb;\n#ifdef SPECULAR\nvec4 specularMapColor=texture2D(specularSampler,vSpecularUV+uvOffset);\nspecularColor=specularMapColor.rgb;\n#ifdef GLOSSINESS\nglossiness=glossiness*specularMapColor.a;\n#endif\n#endif\n#else\nfloat glossiness=0.;\n#endif\n\nvec3 diffuseBase=vec3(0.,0.,0.);\nlightingInfo info;\n#ifdef SPECULARTERM\nvec3 specularBase=vec3(0.,0.,0.);\n#endif\nfloat shadow=1.;\n#include<lightFragment>[0..maxSimultaneousLights]\n#ifdef VERTEXALPHA\nalpha*=vColor.a;\n#endif\n\nvec3 finalDiffuse=clamp(diffuseBase*diffuseColor+vAmbientColor,0.0,1.0)*baseColor.rgb;\n\n#ifdef SPECULARTERM\nvec3 finalSpecular=specularBase*specularColor;\n#ifdef SPECULAROVERALPHA\nalpha=clamp(alpha+dot(finalSpecular,vec3(0.3,0.59,0.11)),0.,1.);\n#endif\n#else\nvec3 finalSpecular=vec3(0.0);\n#endif\n\n\nvec4 color=vec4(finalDiffuse+finalSpecular+(1.0-noiseResult)*colorBlendFactor*waterColor.rgb*reflectiveColor.rgb,alpha);\n\n#include<logDepthFragment>\n#include<fogFragment>\ngl_FragColor=color;\n\n\n}";
 
 
 
@@ -631,10 +634,13 @@ var BABYLON;
             _this.DIFFUSEX = false;
             _this.DIFFUSEY = false;
             _this.DIFFUSEZ = false;
-            _this.DIFFUSENOISE = true;
+            _this.DIFFUSENOISE = false;
+            _this.DIFFUSE = false;
+            _this.PUSHUP = false;
             _this.BUMPX = false;
             _this.BUMPY = false;
             _this.BUMPZ = false;
+            _this.BUMP = false;
             _this.CLIPPLANE = false;
             _this.ALPHATEST = true;
             _this.DEPTHPREPASS = false;
@@ -647,6 +653,7 @@ var BABYLON;
             _this.NUM_BONE_INFLUENCERS = 0;
             _this.BonesPerMesh = 0;
             _this.INSTANCES = false;
+            _this.UV1 = false;
             _this.rebuild();
             return _this;
         }
@@ -657,6 +664,11 @@ var BABYLON;
         function snowMaterial(name, scene) {
             var _this = _super.call(this, name, scene) || this;
             _this.lastTime = 0;
+            _this.noiseStrength = 1;
+            _this.pushup = 1;
+            _this.snowlimit = 6.0;
+            _this.delay = 0.0;
+            _this.speed = 1.0;
             _this.tileSize = 1;
             _this.noiseSize = 25;
             _this.diffuseColor = new BABYLON.Color3(1, 1, 1);
@@ -687,6 +699,12 @@ var BABYLON;
             }
             var defines = subMesh._materialDefines;
             var scene = this.getScene();
+            if (this.pushup) {
+                defines["PUSHUP"] = true;
+            }
+            else {
+                defines["PUSHUP"] = false;
+            }
             if (!this.checkReadyOnEveryCall && subMesh.effect) {
                 if (this._renderId === scene.getRenderId()) {
                     return true;
@@ -696,6 +714,16 @@ var BABYLON;
             // Textures
             if (defines._areTexturesDirty) {
                 if (scene.texturesEnabled) {
+                    defines._needUVs = false;
+                    if (this._diffuseTexture && BABYLON.StandardMaterial.DiffuseTextureEnabled) {
+                        if (!this._diffuseTexture.isReady()) {
+                            return false;
+                        }
+                        else {
+                            defines._needUVs = true;
+                            defines.DIFFUSE = true;
+                        }
+                    }
                     if (BABYLON.StandardMaterial.DiffuseTextureEnabled) {
                         var textures = [this.diffuseTextureX, this.diffuseTextureY, this.diffuseTextureZ, this.perlinNoiseTexture];
                         var textureDefines = ["DIFFUSEX", "DIFFUSEY", "DIFFUSEZ", "DIFFUSENOISE"];
@@ -711,8 +739,8 @@ var BABYLON;
                         }
                     }
                     if (BABYLON.StandardMaterial.BumpTextureEnabled) {
-                        var textures = [this.normalTextureX, this.normalTextureY, this.normalTextureZ];
-                        var textureDefines = ["BUMPX", "BUMPY", "BUMPZ"];
+                        var textures = [this.normalTextureX, this.normalTextureY, this.normalTextureZ, this.normalTexture];
+                        var textureDefines = ["BUMPX", "BUMPY", "BUMPZ", "BUMP"];
                         for (var i = 0; i < textures.length; i++) {
                             if (textures[i]) {
                                 if (!textures[i].isReady()) {
@@ -749,6 +777,9 @@ var BABYLON;
                 }
                 //Attributes
                 var attribs = [BABYLON.VertexBuffer.PositionKind];
+                if (defines.UV1) {
+                    attribs.push(BABYLON.VertexBuffer.UVKind);
+                }
                 if (defines.NORMAL) {
                     attribs.push(BABYLON.VertexBuffer.NormalKind);
                 }
@@ -766,10 +797,12 @@ var BABYLON;
                     "vClipPlane",
                     "tileSize",
                     "noiseSize",
+                    "noiseStrength",
                     "time"
                 ];
                 var samplers = ["diffuseSamplerX", "diffuseSamplerY", "diffuseSamplerZ", "perlinNoiseSampler",
-                    "normalSamplerX", "normalSamplerY", "normalSamplerZ"
+                    "normalSamplerX", "normalSamplerY", "normalSamplerZ",
+                    "diffuseSampler", "normalSampler"
                 ];
                 var uniformBuffers = new Array();
                 BABYLON.MaterialHelper.PrepareUniformsAndSamplersList({
@@ -836,8 +869,14 @@ var BABYLON;
                 if (this.normalTextureZ) {
                     this._activeEffect.setTexture("normalSamplerZ", this.normalTextureZ);
                 }
+                if (this.normalTexture) {
+                    this._activeEffect.setTexture("normalSampler", this.normalTexture);
+                }
                 if (this.perlinNoiseTexture) {
                     this._activeEffect.setTexture("perlinNoiseSampler", this.perlinNoiseTexture);
+                }
+                if (this.diffuseTexture) {
+                    this._activeEffect.setTexture("diffuseSampler", this.diffuseTexture);
                 }
                 // Clip plane
                 BABYLON.MaterialHelper.BindClipPlane(this._activeEffect, scene);
@@ -851,6 +890,7 @@ var BABYLON;
             if (defines.SPECULARTERM) {
                 this._activeEffect.setColor4("vSpecularColor", this.specularColor, this.specularPower);
             }
+            //Lights
             if (scene.lightsEnabled && !this.disableLighting) {
                 BABYLON.MaterialHelper.BindLights(scene, mesh, this._activeEffect, defines, this.maxSimultaneousLights);
             }
@@ -862,8 +902,17 @@ var BABYLON;
             BABYLON.MaterialHelper.BindFogParameters(scene, mesh, this._activeEffect);
             this._afterBind(mesh, this._activeEffect);
             // Time
-            this.lastTime += scene.getEngine().getDeltaTime();
-            this._activeEffect.setFloat("time", this.lastTime);
+            this.lastTime += scene.getEngine().getDeltaTime() * this.speed;
+            if (this.lastTime < 0.0) {
+                this._activeEffect.setFloat("time", 0.0);
+            }
+            else if (this.lastTime > this.snowlimit * 10000.0) {
+                this._activeEffect.setFloat("time", this.snowlimit);
+            }
+            else {
+                this._activeEffect.setFloat("time", this.lastTime / 10000.0);
+            }
+            this._activeEffect.setFloat("noiseStrength", this.noiseStrength);
         };
         snowMaterial.prototype.getAnimatables = function () {
             var results = [];
@@ -892,8 +941,14 @@ var BABYLON;
             if (this._normalTextureZ) {
                 activeTextures.push(this._normalTextureZ);
             }
+            if (this._normalTexture) {
+                activeTextures.push(this._normalTexture);
+            }
             if (this._perlinNoiseTexture) {
                 activeTextures.push(this._perlinNoiseTexture);
+            }
+            if (this._diffuseTexture) {
+                activeTextures.push(this._diffuseTexture);
             }
             return activeTextures;
         };
@@ -919,7 +974,13 @@ var BABYLON;
             if (this._normalTextureZ === texture) {
                 return true;
             }
+            if (this._normalTexture === texture) {
+                return true;
+            }
             if (this._perlinNoiseTexture === texture) {
+                return true;
+            }
+            if (this._diffuseTexture === texture) {
                 return true;
             }
             return false;
@@ -950,6 +1011,12 @@ var BABYLON;
             BABYLON.serializeAsTexture()
         ], snowMaterial.prototype, "mixTexture", void 0);
         __decorate([
+            BABYLON.serializeAsTexture("diffuseTexture")
+        ], snowMaterial.prototype, "_diffuseTexture", void 0);
+        __decorate([
+            BABYLON.expandToProperty("_markAllSubMeshesAsTexturesDirty")
+        ], snowMaterial.prototype, "diffuseTexture", void 0);
+        __decorate([
             BABYLON.serializeAsTexture("diffuseTextureX")
         ], snowMaterial.prototype, "_diffuseTextureX", void 0);
         __decorate([
@@ -967,6 +1034,12 @@ var BABYLON;
         __decorate([
             BABYLON.expandToProperty("_markAllSubMeshesAsTexturesDirty")
         ], snowMaterial.prototype, "diffuseTextureZ", void 0);
+        __decorate([
+            BABYLON.serializeAsTexture("normalTexture")
+        ], snowMaterial.prototype, "_normalTexture", void 0);
+        __decorate([
+            BABYLON.expandToProperty("_markAllSubMeshesAsTexturesDirty")
+        ], snowMaterial.prototype, "normalTexture", void 0);
         __decorate([
             BABYLON.serializeAsTexture("normalTextureX")
         ], snowMaterial.prototype, "_normalTextureX", void 0);
@@ -1025,8 +1098,8 @@ var BABYLON;
 
 //# sourceMappingURL=babylon.snowMaterial.js.map
 
-BABYLON.Effect.ShadersStore['snowVertexShader'] = "precision highp float;\n\nattribute vec3 position;\n#ifdef NORMAL\nattribute vec3 normal;\n#endif\n#ifdef VERTEXCOLOR\nattribute vec4 color;\n#endif\n#include<bonesDeclaration>\n\n#include<instancesDeclaration>\nuniform mat4 view;\nuniform mat4 viewProjection;\n#ifdef DIFFUSEX\nvarying vec2 vTextureUVX;\n#endif\n#ifdef DIFFUSEY\nvarying vec2 vTextureUVY;\n#endif\n#ifdef DIFFUSEZ\nvarying vec2 vTextureUVZ;\n#endif\n#ifdef DIFFUSENOISE\nvarying vec2 vTextureUVN;\n#endif\nuniform float tileSize;\nuniform float noiseSize;\n#ifdef POINTSIZE\nuniform float pointSize;\n#endif\n\nvarying vec3 vPositionW;\n#ifdef NORMAL\nvarying mat3 tangentSpace;\n#endif\n#ifdef VERTEXCOLOR\nvarying vec4 vColor;\n#endif\n#include<clipPlaneVertexDeclaration>\n#include<fogVertexDeclaration>\n#include<__decl__lightFragment>[0..maxSimultaneousLights]\nuniform float time;\nvarying float finalnoise;\nvarying float normaly;\n\nfloat translationSpeed=0.0;\nfloat r(float n)\n{\nreturn fract(cos(n*89.42)*343.42);\n}\nvec2 r(vec2 n)\n{\nreturn vec2(r(n.x*23.62-300.0+n.y*34.35),r(n.x*45.13+256.0+n.y*38.89)); \n}\nfloat worley(vec2 n,float s)\n{\nfloat dis=1.0;\nfor(int x=-1; x<=1; x++)\n{\nfor(int y=-1; y<=1; y++)\n{\nvec2 p=floor(n/s)+vec2(x,y);\nfloat d=length(r(p)+vec2(x,y)-fract(n/s));\nif (dis>d)\ndis=d;\n}\n}\nreturn 1.0-dis;\n}\nvec3 hash33(vec3 p3)\n{\np3=fract(p3*vec3(0.1031,0.11369,0.13787));\np3+=dot(p3,p3.yxz+19.19);\nreturn -1.0+2.0*fract(vec3((p3.x+p3.y)*p3.z,(p3.x+p3.z)*p3.y,(p3.y+p3.z)*p3.x));\n}\nfloat perlinNoise(vec3 p)\n{\nvec3 pi=floor(p);\nvec3 pf=p-pi;\nvec3 w=pf*pf*(3.0-2.0*pf);\nreturn mix(\nmix(\nmix(\ndot(pf-vec3(0,0,0),hash33(pi+vec3(0,0,0))),\ndot(pf-vec3(1,0,0),hash33(pi+vec3(1,0,0))),\nw.x\n),\nmix(\ndot(pf-vec3(0,0,1),hash33(pi+vec3(0,0,1))),\ndot(pf-vec3(1,0,1),hash33(pi+vec3(1,0,1))),\nw.x\n),\nw.z\n),\nmix(\nmix(\ndot(pf-vec3(0,1,0),hash33(pi+vec3(0,1,0))),\ndot(pf-vec3(1,1,0),hash33(pi+vec3(1,1,0))),\nw.x\n),\nmix(\ndot(pf-vec3(0,1,1),hash33(pi+vec3(0,1,1))),\ndot(pf-vec3(1,1,1),hash33(pi+vec3(1,1,1))),\nw.x\n),\nw.z\n),\nw.y\n);\n}\nfloat zerotofive(float normaly)\n{\n\n\nreturn max(0.,normaly);\n}\nvoid main(void)\n{\n#include<instancesVertex>\n#include<bonesVertex>\nvec3 positionup=position-vec3(0.0,0.1,0.0);\n\nvec2 uv=vec2(position.x,position.z);\nfloat dis=(\n1.0+perlinNoise(vec3(uv/vec2(noiseSize,noiseSize),0.0)*8.0))\n*(1.0+(worley(uv,32.0)+ 0.5*worley(2.0*uv,32.0)+0.25*worley(4.0*uv,32.0))\n);\nfinalnoise=dis/10.0;\npositionup.y+=time/10000.0*zerotofive(normal.y)*finalnoise;\ngl_Position=viewProjection*finalWorld*vec4(positionup,1.0);\nvec4 worldPos=finalWorld*vec4(positionup,1.0);\nvPositionW=vec3(worldPos);\nnormaly=normal.y;\n#ifdef DIFFUSEX\nvTextureUVX=worldPos.zy/tileSize;\n#endif\n#ifdef DIFFUSEY\nvTextureUVY=worldPos.xz/tileSize;\n#endif\n#ifdef DIFFUSEZ\nvTextureUVZ=worldPos.xy/tileSize;\n#endif\n#ifdef DIFFUSENOISE\nvTextureUVN=worldPos.xz/(tileSize*5.);\n#endif\n#ifdef NORMAL\n\nvec3 xtan=vec3(0,0,1);\nvec3 xbin=vec3(0,1,0);\nvec3 ytan=vec3(1,0,0);\nvec3 ybin=vec3(0,0,1);\nvec3 ztan=vec3(1,0,0);\nvec3 zbin=vec3(0,1,0);\nvec3 normalizedNormal=normalize(normal);\nnormalizedNormal*=normalizedNormal;\nvec3 worldBinormal=normalize(xbin*normalizedNormal.x+ybin*normalizedNormal.y+zbin*normalizedNormal.z);\nvec3 worldTangent=normalize(xtan*normalizedNormal.x+ytan*normalizedNormal.y+ztan*normalizedNormal.z);\nworldTangent=(world*vec4(worldTangent,1.0)).xyz;\nworldBinormal=(world*vec4(worldBinormal,1.0)).xyz;\nvec3 worldNormal=normalize(cross(worldTangent,worldBinormal));\ntangentSpace[0]=worldTangent;\ntangentSpace[1]=worldBinormal;\ntangentSpace[2]=worldNormal;\n#endif\n\n#include<clipPlaneVertex>\n\n#include<fogVertex>\n\n#include<shadowsVertex>[0..maxSimultaneousLights]\n\n#ifdef VERTEXCOLOR\nvColor=color;\n#endif\n\n#ifdef POINTSIZE\ngl_PointSize=pointSize;\n#endif\n}\n";
-BABYLON.Effect.ShadersStore['snowPixelShader'] = "precision highp float;\n\nuniform vec3 vEyePosition;\nuniform vec4 vDiffuseColor;\n#ifdef SPECULARTERM\nuniform vec4 vSpecularColor;\n#endif\n\nvarying vec3 vPositionW;\n#ifdef VERTEXCOLOR\nvarying vec4 vColor;\n#endif\n\n#include<helperFunctions>\n\n#include<__decl__lightFragment>[0..maxSimultaneousLights]\n\n#ifdef DIFFUSEX\nvarying vec2 vTextureUVX;\nuniform sampler2D diffuseSamplerX;\n#ifdef BUMPX\nuniform sampler2D normalSamplerX;\n#endif\n#endif\n#ifdef DIFFUSEY\nvarying vec2 vTextureUVY;\nuniform sampler2D diffuseSamplerY;\n#ifdef BUMPY\nuniform sampler2D normalSamplerY;\n#endif\n#endif\n#ifdef DIFFUSEZ\nvarying vec2 vTextureUVZ;\nuniform sampler2D diffuseSamplerZ;\n#ifdef BUMPZ\nuniform sampler2D normalSamplerZ;\n#endif\n#endif\n#ifdef DIFFUSENOISE\nvarying vec2 vTextureUVN;\nuniform sampler2D perlinNoiseSampler;\n#endif\n#ifdef NORMAL\nvarying mat3 tangentSpace;\n#endif\nuniform float time;\nvarying float finalnoise;\nvarying float normaly;\n#include<lightsFragmentFunctions>\n#include<shadowsFragmentFunctions>\n#include<clipPlaneFragmentDeclaration>\n#include<fogFragmentDeclaration>\nfloat becomesnowtime(float time)\n{\nreturn sin(min(time/10000.* finalnoise,1.57))*normaly;\n}\nvoid main(void) {\n\n#include<clipPlaneFragment>\nvec3 viewDirectionW=normalize(vEyePosition-vPositionW);\n\nvec4 baseColor=vec4(0.,0.,0.,1.);\nvec3 diffuseColor=vDiffuseColor.rgb;\n\nfloat alpha=vDiffuseColor.a;\n\n#ifdef NORMAL\nvec3 normalW=tangentSpace[2];\n#else\nvec3 normalW=vec3(1.0,1.0,1.0);\n#endif\nvec4 baseNormal=vec4(0.0,0.0,0.0,1.0);\nnormalW*=normalW;\n#ifdef DIFFUSEX\nbaseColor+=texture2D(diffuseSamplerX,vTextureUVX)*normalW.x;\n#ifdef BUMPX\nbaseNormal+=texture2D(normalSamplerX,vTextureUVX)*normalW.x;\n#endif\n#endif\n#ifdef DIFFUSEY\n\nfloat t=becomesnowtime(time);\nvec4 temp=texture2D(diffuseSamplerX,vTextureUVY)*normalW.y*(1.-t)\n+texture2D(diffuseSamplerY,vTextureUVY)*normalW.y*t;\nbaseColor+=temp;\n#ifdef BUMPY\ntemp=texture2D(normalSamplerX,vTextureUVY)*normalW.y*(1.-t)\n+texture2D(normalSamplerY,vTextureUVY)*normalW.y*t;\nbaseNormal+=temp;\n#endif\n#endif\n#ifdef DIFFUSEZ\nbaseColor+=texture2D(diffuseSamplerZ,vTextureUVZ)*normalW.z;\n#ifdef BUMPZ\nbaseNormal+=texture2D(normalSamplerZ,vTextureUVZ)*normalW.z;\n#endif\n#endif\n#ifdef NORMAL\nnormalW=normalize((2.0*baseNormal.xyz-1.0)*tangentSpace);\n#endif\n#ifdef ALPHATEST\nif (baseColor.a<0.4)\ndiscard;\n#endif\n#include<depthPrePass>\n#ifdef VERTEXCOLOR\nbaseColor.rgb*=vColor.rgb;\n#endif\n\nvec3 diffuseBase=vec3(0.,0.,0.);\nlightingInfo info;\nfloat shadow=1.;\n#ifdef SPECULARTERM\nfloat glossiness=vSpecularColor.a;\nvec3 specularBase=vec3(0.,0.,0.);\nvec3 specularColor=vSpecularColor.rgb;\n#else\nfloat glossiness=0.;\n#endif\n#include<lightFragment>[0..maxSimultaneousLights]\n#ifdef VERTEXALPHA\n\nalpha=abs(normalW.y);\n#endif\n#ifdef SPECULARTERM\nvec3 finalSpecular=specularBase*specularColor;\n#else\nvec3 finalSpecular=vec3(0.0);\n#endif\nvec3 finalDiffuse=clamp(diffuseBase*diffuseColor,0.0,1.0)*baseColor.rgb;\n\nvec4 color=vec4(finalDiffuse+finalSpecular,alpha);\n\n#include<fogFragment>\ngl_FragColor=color;\n\n}\n";
+BABYLON.Effect.ShadersStore['snowVertexShader'] = "precision highp float;\n\nattribute vec3 position;\n#ifdef UV1\nattribute vec2 uv;\n#endif\n#ifdef NORMAL\nattribute vec3 normal;\n#endif\n#ifdef VERTEXCOLOR\nattribute vec4 color;\n#endif\n#include<bonesDeclaration>\n\n#include<instancesDeclaration>\nuniform mat4 view;\nuniform mat4 viewProjection;\n#ifdef DIFFUSE\nvarying vec2 vDiffuseUV;\n#endif\n#ifdef DIFFUSEX\nvarying vec2 vTextureUVX;\n#endif\n#ifdef DIFFUSEY\nvarying vec2 vTextureUVY;\n#endif\n#ifdef DIFFUSEZ\nvarying vec2 vTextureUVZ;\n#endif\n#ifdef DIFFUSENOISE\nvarying vec2 vTextureUVN;\nuniform sampler2D perlinNoiseSampler;\n#endif\nuniform float tileSize;\nuniform float noiseSize;\n#ifdef POINTSIZE\nuniform float pointSize;\n#endif\n\nvarying vec3 vPositionW;\n#ifdef NORMAL\nvarying mat3 tangentSpace;\n#endif\n#ifdef VERTEXCOLOR\nvarying vec4 vColor;\n#endif\n#include<clipPlaneVertexDeclaration>\n#include<fogVertexDeclaration>\n#include<__decl__lightFragment>[0..maxSimultaneousLights]\nuniform float time;\nvarying float finalnoise;\nvarying float normaly;\nuniform float noiseStrength;\n\nfloat translationSpeed=0.0;\nfloat r(float n)\n{\nreturn fract(cos(n*89.42)*343.42);\n}\nvec2 r(vec2 n)\n{\nreturn vec2(r(n.x*23.62-300.0+n.y*34.35),r(n.x*45.13+256.0+n.y*38.89)); \n}\nfloat worley(vec2 n,float s)\n{\nfloat dis=1.0;\nfor(int x=-1; x<=1; x++)\n{\nfor(int y=-1; y<=1; y++)\n{\nvec2 p=floor(n/s)+vec2(x,y);\nfloat d=length(r(p)+vec2(x,y)-fract(n/s));\nif (dis>d)\ndis=d;\n}\n}\nreturn 1.0-dis;\n}\nvec3 hash33(vec3 p3)\n{\np3=fract(p3*vec3(0.1031,0.11369,0.13787));\np3+=dot(p3,p3.yxz+19.19);\nreturn -1.0+2.0*fract(vec3((p3.x+p3.y)*p3.z,(p3.x+p3.z)*p3.y,(p3.y+p3.z)*p3.x));\n}\nfloat perlinNoise(vec3 p)\n{\nvec3 pi=floor(p);\nvec3 pf=p-pi;\nvec3 w=pf*pf*(3.0-2.0*pf);\nreturn mix(\nmix(\nmix(\ndot(pf-vec3(0,0,0),hash33(pi+vec3(0,0,0))),\ndot(pf-vec3(1,0,0),hash33(pi+vec3(1,0,0))),\nw.x\n),\nmix(\ndot(pf-vec3(0,0,1),hash33(pi+vec3(0,0,1))),\ndot(pf-vec3(1,0,1),hash33(pi+vec3(1,0,1))),\nw.x\n),\nw.z\n),\nmix(\nmix(\ndot(pf-vec3(0,1,0),hash33(pi+vec3(0,1,0))),\ndot(pf-vec3(1,1,0),hash33(pi+vec3(1,1,0))),\nw.x\n),\nmix(\ndot(pf-vec3(0,1,1),hash33(pi+vec3(0,1,1))),\ndot(pf-vec3(1,1,1),hash33(pi+vec3(1,1,1))),\nw.x\n),\nw.z\n),\nw.y\n);\n}\nfloat zerotofive(float normaly)\n{\nreturn max(0.,normaly);\n}\nvoid main(void)\n{\n#include<instancesVertex>\n#include<bonesVertex>\nvec3 positionup=position;\n\nvec2 noiseuv=vec2(position.x,position.z);\nfloat dis=(\n1.0+perlinNoise(vec3(noiseuv/vec2(noiseSize,noiseSize),0.0)*8.0))\n*(1.0+(worley(noiseuv,32.0)+ 0.5*worley(2.0*noiseuv,32.0)+0.25*worley(4.0*noiseuv,32.0))\n);\nfinalnoise=dis/10.0;\n#ifdef DIFFUSENOISE\n\n\n#endif\n\n\n\n#ifdef PUSHUP\npositionup.y+=time*zerotofive(normal.y)*finalnoise;\n#endif \ngl_Position=viewProjection*finalWorld*vec4(positionup,1.0);\nvec4 worldPos=finalWorld*vec4(positionup,1.0);\nvPositionW=vec3(worldPos);\nnormaly=normal.y;\n#ifdef DIFFUSE\nvDiffuseUV=uv;\n\n#endif\n#ifdef DIFFUSEX\nvTextureUVX=worldPos.zy/tileSize;\n#endif\n#ifdef DIFFUSEY\nvTextureUVY=worldPos.xz/tileSize;\n#endif\n#ifdef DIFFUSEZ\nvTextureUVZ=worldPos.xy/tileSize;\n#endif\n#ifdef DIFFUSENOISE\nvTextureUVN=worldPos.xz/(tileSize*5.);\n#endif\n#ifdef NORMAL\n\nvec3 xtan=vec3(0,0,1);\nvec3 xbin=vec3(0,1,0);\nvec3 ytan=vec3(1,0,0);\nvec3 ybin=vec3(0,0,1);\nvec3 ztan=vec3(1,0,0);\nvec3 zbin=vec3(0,1,0);\nvec3 normalizedNormal=normalize(normal);\nnormalizedNormal*=normalizedNormal;\nvec3 worldBinormal=normalize(xbin*normalizedNormal.x+ybin*normalizedNormal.y+zbin*normalizedNormal.z);\nvec3 worldTangent=normalize(xtan*normalizedNormal.x+ytan*normalizedNormal.y+ztan*normalizedNormal.z);\nworldTangent=(world*vec4(worldTangent,1.0)).xyz;\nworldBinormal=(world*vec4(worldBinormal,1.0)).xyz;\nvec3 worldNormal=normalize(cross(worldTangent,worldBinormal));\ntangentSpace[0]=worldTangent;\ntangentSpace[1]=worldBinormal;\ntangentSpace[2]=worldNormal;\n#endif\n\n#include<clipPlaneVertex>\n\n#include<fogVertex>\n\n#include<shadowsVertex>[0..maxSimultaneousLights]\n\n#ifdef VERTEXCOLOR\nvColor=color;\n#endif\n\n#ifdef POINTSIZE\ngl_PointSize=pointSize;\n#endif\n}\n";
+BABYLON.Effect.ShadersStore['snowPixelShader'] = "precision highp float;\n\nuniform vec3 vEyePosition;\nuniform vec4 vDiffuseColor;\n#ifdef SPECULARTERM\nuniform vec4 vSpecularColor;\n#endif\n\nvarying vec3 vPositionW;\n#ifdef VERTEXCOLOR\nvarying vec4 vColor;\n#endif\nuniform float tileSize;\n\n#include<helperFunctions>\n\n#include<__decl__lightFragment>[0..maxSimultaneousLights]\n\n#ifdef DIFFUSE\nvarying vec2 vDiffuseUV;\nuniform sampler2D diffuseSampler;\n#ifdef BUMPY\nuniform sampler2D normalSampler;\n#endif\n#endif\n#ifdef DIFFUSEX\nvarying vec2 vTextureUVX;\nuniform sampler2D diffuseSamplerX;\n#ifdef BUMPX\nuniform sampler2D normalSamplerX;\n#endif\n#endif\n#ifdef DIFFUSEY\nvarying vec2 vTextureUVY;\nuniform sampler2D diffuseSamplerY;\n#ifdef BUMPY\nuniform sampler2D normalSamplerY;\n#endif\n#endif\n#ifdef DIFFUSEZ\nvarying vec2 vTextureUVZ;\nuniform sampler2D diffuseSamplerZ;\n#ifdef BUMPZ\nuniform sampler2D normalSamplerZ;\n#endif\n#endif\n#ifdef DIFFUSENOISE\n\nuniform sampler2D perlinNoiseSampler;\nuniform float noiseSize;\n#endif\n#ifdef NORMAL\nvarying mat3 tangentSpace;\n#endif\nuniform float time;\nvarying float finalnoise;\nvarying float normaly;\n#include<lightsFragmentFunctions>\n#include<shadowsFragmentFunctions>\n#include<clipPlaneFragmentDeclaration>\n#include<fogFragmentDeclaration>\nfloat becomesnowtime(float time)\n{\nreturn sin(min(time* finalnoise,1.57))*normaly;\n}\n#ifdef DIFFUSENOISE\nfloat becomesnowtimetexture(float time)\n{\n\n\n\nreturn sin(min(time/2.* texture2D(perlinNoiseSampler,vTextureUVY).r,1.57))*normaly;\n\n}\n#endif\nvoid main(void) {\n\n#include<clipPlaneFragment>\nvec3 viewDirectionW=normalize(vEyePosition-vPositionW);\n\nvec4 baseColor=vec4(0.,0.,0.,1.);\nvec3 diffuseColor=vDiffuseColor.rgb;\n\nfloat alpha=vDiffuseColor.a;\n\n#ifdef NORMAL\nvec3 normalW=tangentSpace[2];\n#else\nvec3 normalW=vec3(1.0,1.0,1.0);\n#endif\nvec4 baseNormal=vec4(0.0,0.0,0.0,1.0);\nnormalW*=normalW;\nvec4 temp;\n#ifdef DIFFUSENOISE\nfloat t=becomesnowtimetexture(time);\n#else\nfloat t=becomesnowtime(time);\n#endif\n#ifdef DIFFUSE\nbaseColor+=texture2D(diffuseSampler,vDiffuseUV);\nvec4 snowcolor=vec4(0.,0.,0.,1.);\nvec4 snownormal=vec4(0.,0.,0.,1.);\n#ifdef DIFFUSEX\nsnowcolor+=texture2D(diffuseSamplerX,vTextureUVX)*normalW.x;\n#ifdef BUMPX\nsnownormal+=texture2D(normalSamplerX,vTextureUVX)*normalW.x;\n#endif\n#endif\n#ifdef DIFFUSEY\nsnowcolor+=texture2D(diffuseSamplerY,vTextureUVY)*normalW.y;\n#ifdef BUMPY\nsnownormal+=texture2D(normalSamplerY,vTextureUVY)*normalW.y;\n#endif\n#endif\n#ifdef DIFFUSEZ\nsnowcolor+=texture2D(diffuseSamplerZ,vTextureUVZ)*normalW.z;\n#ifdef BUMPZ\nsnownormal+=texture2D(normalSamplerZ,vTextureUVZ)*normalW.z;\n#endif\n#endif\nbaseColor=baseColor*(1.-t)+snowcolor*t;\n#ifdef BUMP\nbaseNormal+=texture2D(normalSampler,vDiffuseUV);\nbaseNormal=baseNormal*(1.-t)+snownormal*t;\n#endif\n#else\n#ifdef PUSHUP\n#ifdef DIFFUSEX\nbaseColor+=texture2D(diffuseSamplerX,vTextureUVX)*normalW.x;\n#ifdef BUMPX\nbaseNormal+=texture2D(normalSamplerX,vTextureUVX)*normalW.x;\n#endif\n#endif\n#ifdef DIFFUSEY\nbaseColor+=texture2D(diffuseSamplerY,vTextureUVY)*normalW.y;\n#ifdef BUMPY\nbaseNormal+=texture2D(normalSamplerY,vTextureUVY)*normalW.y;\n#endif\n#endif\n#ifdef DIFFUSEZ\nbaseColor+=texture2D(diffuseSamplerZ,vTextureUVZ)*normalW.z;\n#ifdef BUMPZ\nbaseNormal+=texture2D(normalSamplerZ,vTextureUVZ)*normalW.z;\n#endif\n#endif\n#else\n\n#ifdef DIFFUSEX\ntemp=texture2D(diffuseSamplerX,vTextureUVX)*normalW.x*( 1.-t)\n+texture2D(diffuseSamplerY,vTextureUVX)*normalW.x*t;\nbaseColor+=temp;\n#ifdef BUMPX\ntemp=texture2D(normalSamplerX,vTextureUVX)*normalW.x*( 1.-t)\n+texture2D(normalSamplerY,vTextureUVX)*normalW.x*t;\nbaseNormal+=temp;\n#endif\n#endif\n#ifdef DIFFUSEY\ntemp=texture2D(diffuseSamplerX,vTextureUVY)*normalW.y*(1.-t)\n+texture2D(diffuseSamplerY,vTextureUVY)*normalW.y*t;\nbaseColor+=temp;\n#ifdef BUMPY\ntemp=texture2D(normalSamplerX,vTextureUVY)*normalW.y*(1.-t)\n+texture2D(normalSamplerY,vTextureUVY)*normalW.y*t;\nbaseNormal+=temp;\n#endif\n#endif\n#ifdef DIFFUSEZ\ntemp=texture2D(diffuseSamplerZ,vTextureUVZ)*normalW.z*(1.- t)\n+texture2D(diffuseSamplerY,vTextureUVZ)*normalW.z*t;\nbaseColor+=temp;\n#ifdef BUMPZ\ntemp=texture2D(normalSamplerZ,vTextureUVZ)*normalW.z*(1.- t)\n+texture2D(normalSamplerY,vTextureUVZ)*normalW.z*t;\nbaseNormal+=temp;\n#endif\n#endif\n#endif\n#endif\n#ifdef NORMAL\nnormalW=normalize((2.0*baseNormal.xyz-1.0)*tangentSpace);\n#endif\n#ifdef ALPHATEST\nif (baseColor.a<0.4)\ndiscard;\n#endif\n#include<depthPrePass>\n#ifdef VERTEXCOLOR\nbaseColor.rgb*=vColor.rgb;\n#endif\n\nvec3 diffuseBase=vec3(0.,0.,0.);\nlightingInfo info;\nfloat shadow=1.;\n#ifdef SPECULARTERM\nfloat glossiness=vSpecularColor.a;\nvec3 specularBase=vec3(0.,0.,0.);\nvec3 specularColor=vSpecularColor.rgb;\n#else\nfloat glossiness=0.;\n#endif\n#include<lightFragment>[0..maxSimultaneousLights]\n#ifdef VERTEXALPHA\n\nalpha=abs(normalW.y);\n#endif\n#ifdef SPECULARTERM\nvec3 finalSpecular=specularBase*specularColor;\n#else\nvec3 finalSpecular=vec3(0.0);\n#endif\nvec3 finalDiffuse=clamp(diffuseBase*diffuseColor,0.0,1.0)*baseColor.rgb;\n\nvec4 color=vec4(finalDiffuse+finalSpecular,alpha);\n\n#include<fogFragment>\ngl_FragColor=color;\n\n}\n";
 
 
 
@@ -4802,6 +4875,327 @@ var BABYLON;
 
 BABYLON.Effect.ShadersStore['skyVertexShader'] = "precision highp float;\n\nattribute vec3 position;\n#ifdef VERTEXCOLOR\nattribute vec4 color;\n#endif\n\nuniform mat4 world;\nuniform mat4 view;\nuniform mat4 viewProjection;\n#ifdef POINTSIZE\nuniform float pointSize;\n#endif\n\nvarying vec3 vPositionW;\n#ifdef VERTEXCOLOR\nvarying vec4 vColor;\n#endif\n#include<clipPlaneVertexDeclaration>\n#include<fogVertexDeclaration>\nvoid main(void) {\ngl_Position=viewProjection*world*vec4(position,1.0);\nvec4 worldPos=world*vec4(position,1.0);\nvPositionW=vec3(worldPos);\n\n#include<clipPlaneVertex>\n\n#include<fogVertex>\n\n#ifdef VERTEXCOLOR\nvColor=color;\n#endif\n\n#ifdef POINTSIZE\ngl_PointSize=pointSize;\n#endif\n}\n";
 BABYLON.Effect.ShadersStore['skyPixelShader'] = "precision highp float;\n\nvarying vec3 vPositionW;\n#ifdef VERTEXCOLOR\nvarying vec4 vColor;\n#endif\n#include<clipPlaneFragmentDeclaration>\n\nuniform vec3 cameraPosition;\nuniform float luminance;\nuniform float turbidity;\nuniform float rayleigh;\nuniform float mieCoefficient;\nuniform float mieDirectionalG;\nuniform vec3 sunPosition;\n\n#include<fogFragmentDeclaration>\n\nconst float e=2.71828182845904523536028747135266249775724709369995957;\nconst float pi=3.141592653589793238462643383279502884197169;\nconst float n=1.0003;\nconst float N=2.545E25;\nconst float pn=0.035;\nconst vec3 lambda=vec3(680E-9,550E-9,450E-9);\nconst vec3 K=vec3(0.686,0.678,0.666);\nconst float v=4.0;\nconst float rayleighZenithLength=8.4E3;\nconst float mieZenithLength=1.25E3;\nconst vec3 up=vec3(0.0,1.0,0.0);\nconst float EE=1000.0;\nconst float sunAngularDiameterCos=0.999956676946448443553574619906976478926848692873900859324;\nconst float cutoffAngle=pi/1.95;\nconst float steepness=1.5;\nvec3 totalRayleigh(vec3 lambda)\n{\nreturn (8.0*pow(pi,3.0)*pow(pow(n,2.0)-1.0,2.0)*(6.0+3.0*pn))/(3.0*N*pow(lambda,vec3(4.0))*(6.0-7.0*pn));\n}\nvec3 simplifiedRayleigh()\n{\nreturn 0.0005/vec3(94,40,18);\n}\nfloat rayleighPhase(float cosTheta)\n{ \nreturn (3.0/(16.0*pi))*(1.0+pow(cosTheta,2.0));\n}\nvec3 totalMie(vec3 lambda,vec3 K,float T)\n{\nfloat c=(0.2*T )*10E-18;\nreturn 0.434*c*pi*pow((2.0*pi)/lambda,vec3(v-2.0))*K;\n}\nfloat hgPhase(float cosTheta,float g)\n{\nreturn (1.0/(4.0*pi))*((1.0-pow(g,2.0))/pow(1.0-2.0*g*cosTheta+pow(g,2.0),1.5));\n}\nfloat sunIntensity(float zenithAngleCos)\n{\nreturn EE*max(0.0,1.0-exp(-((cutoffAngle-acos(zenithAngleCos))/steepness)));\n}\nfloat A=0.15;\nfloat B=0.50;\nfloat C=0.10;\nfloat D=0.20;\nfloat EEE=0.02;\nfloat F=0.30;\nfloat W=1000.0;\nvec3 Uncharted2Tonemap(vec3 x)\n{\nreturn ((x*(A*x+C*B)+D*EEE)/(x*(A*x+B)+D*F))-EEE/F;\n}\nvoid main(void) {\n\n#include<clipPlaneFragment>\n\nfloat sunfade=1.0-clamp(1.0-exp((sunPosition.y/450000.0)),0.0,1.0);\nfloat rayleighCoefficient=rayleigh-(1.0*(1.0-sunfade));\nvec3 sunDirection=normalize(sunPosition);\nfloat sunE=sunIntensity(dot(sunDirection,up));\nvec3 betaR=simplifiedRayleigh()*rayleighCoefficient;\nvec3 betaM=totalMie(lambda,K,turbidity)*mieCoefficient;\nfloat zenithAngle=acos(max(0.0,dot(up,normalize(vPositionW-cameraPosition))));\nfloat sR=rayleighZenithLength/(cos(zenithAngle)+0.15*pow(93.885-((zenithAngle*180.0)/pi),-1.253));\nfloat sM=mieZenithLength/(cos(zenithAngle)+0.15*pow(93.885-((zenithAngle*180.0)/pi),-1.253));\nvec3 Fex=exp(-(betaR*sR+betaM*sM));\nfloat cosTheta=dot(normalize(vPositionW-cameraPosition),sunDirection);\nfloat rPhase=rayleighPhase(cosTheta*0.5+0.5);\nvec3 betaRTheta=betaR*rPhase;\nfloat mPhase=hgPhase(cosTheta,mieDirectionalG);\nvec3 betaMTheta=betaM*mPhase;\nvec3 Lin=pow(sunE*((betaRTheta+betaMTheta)/(betaR+betaM))*(1.0-Fex),vec3(1.5));\nLin*=mix(vec3(1.0),pow(sunE*((betaRTheta+betaMTheta)/(betaR+betaM))*Fex,vec3(1.0/2.0)),clamp(pow(1.0-dot(up,sunDirection),5.0),0.0,1.0));\nvec3 direction=normalize(vPositionW-cameraPosition);\nfloat theta=acos(direction.y);\nfloat phi=atan(direction.z,direction.x);\nvec2 uv=vec2(phi,theta)/vec2(2.0*pi,pi)+vec2(0.5,0.0);\nvec3 L0=vec3(0.1)*Fex;\nfloat sundisk=smoothstep(sunAngularDiameterCos,sunAngularDiameterCos+0.00002,cosTheta);\nL0+=(sunE*19000.0*Fex)*sundisk;\nvec3 whiteScale=1.0/Uncharted2Tonemap(vec3(W));\nvec3 texColor=(Lin+L0); \ntexColor*=0.04 ;\ntexColor+=vec3(0.0,0.001,0.0025)*0.3;\nfloat g_fMaxLuminance=1.0;\nfloat fLumScaled=0.1/luminance; \nfloat fLumCompressed=(fLumScaled*(1.0+(fLumScaled/(g_fMaxLuminance*g_fMaxLuminance))))/(1.0+fLumScaled); \nfloat ExposureBias=fLumCompressed;\nvec3 curr=Uncharted2Tonemap((log2(2.0/pow(luminance,4.0)))*texColor);\n\n\n\nvec3 retColor=curr*whiteScale;\n\n\nfloat alpha=1.0;\n#ifdef VERTEXCOLOR\nretColor.rgb*=vColor.rgb;\n#endif\n#ifdef VERTEXALPHA\nalpha*=vColor.a;\n#endif\n\nvec4 color=clamp(vec4(retColor.rgb,alpha),0.0,1.0);\n\n#include<fogFragment>\ngl_FragColor=color;\n}";
+
+
+
+
+var BABYLON;
+(function (BABYLON) {
+    var anotherSkyMaterialDefines = /** @class */ (function (_super) {
+        __extends(anotherSkyMaterialDefines, _super);
+        function anotherSkyMaterialDefines() {
+            var _this = _super.call(this) || this;
+            _this.CLIPPLANE = false;
+            _this.POINTSIZE = false;
+            _this.FOG = false;
+            _this.VERTEXCOLOR = false;
+            _this.VERTEXALPHA = false;
+            // switch to false to disable real-time generated clouds
+            _this.DIFFUSENOISE = false; //true;
+            _this.rebuild();
+            return _this;
+        }
+        return anotherSkyMaterialDefines;
+    }(BABYLON.MaterialDefines));
+    var anotherSkyMaterial = /** @class */ (function (_super) {
+        __extends(anotherSkyMaterial, _super);
+        function anotherSkyMaterial(name, scene) {
+            var _this = _super.call(this, name, scene) || this;
+            // Public members
+            _this.lastTime = 0;
+            /*public timeScale: number = 1.0;
+            public cloudScale: number = 1.0;
+            public cover: number = 0.5;
+            public softness: number = 0.2;
+            public brightness: number = 0.0;
+            public noiseOctaves: number = 4.0;
+            public curlStrain: number = 3.0;*/
+            _this.timeScale = 0.1;
+            _this.cloudScale = 0.1;
+            //public cloudScale: number = 0.0;
+            _this.cover = 0.5;
+            _this.softness = 0.2;
+            _this.brightness = 0.1;
+            _this.noiseOctaves = 5.0;
+            _this.curlStrain = 3.0;
+            _this.skyTime = 0;
+            _this.luminance = 1.0;
+            _this.turbidity = 10.0;
+            //public turbidity: number = 3.7;
+            _this.rayleigh = 2.0;
+            //public rayleigh: number = 0.1;
+            _this.mieCoefficient = 0.005;
+            //public mieCoefficient: number = 0.001;
+            _this.turbidity2 = 3.7;
+            _this.rayleigh2 = 0.1;
+            _this.mieCoefficient2 = 0.001;
+            _this.mieDirectionalG = 0.8;
+            _this.distance = 500;
+            _this.inclination = 0.49;
+            _this.azimuth = 0.25;
+            _this.sunPosition = new BABYLON.Vector3(1, 0, 0);
+            _this.useSunPosition = true;
+            // @serializeAsTexture("perlinNoiseTexture")
+            // private _perlinNoiseTexture: BaseTexture;
+            // @expandToProperty("_markAllSubMeshesAsTexturesDirty")
+            // public perlinNoiseTexture: BaseTexture;  
+            // Private members
+            _this._cameraPosition = BABYLON.Vector3.Zero();
+            return _this;
+        }
+        anotherSkyMaterial.prototype.needAlphaBlending = function () {
+            return (this.alpha < 1.0);
+        };
+        anotherSkyMaterial.prototype.needAlphaTesting = function () {
+            return false;
+        };
+        anotherSkyMaterial.prototype.getAlphaTestTexture = function () {
+            return null;
+        };
+        // Methods   
+        anotherSkyMaterial.prototype.isReadyForSubMesh = function (mesh, subMesh, useInstances) {
+            if (this.isFrozen) {
+                if (this._wasPreviouslyReady && subMesh.effect) {
+                    return true;
+                }
+            }
+            if (!subMesh._materialDefines) {
+                subMesh._materialDefines = new anotherSkyMaterialDefines();
+            }
+            var defines = subMesh._materialDefines;
+            var scene = this.getScene();
+            if (!this.checkReadyOnEveryCall && subMesh.effect) {
+                if (this._renderId === scene.getRenderId()) {
+                    return true;
+                }
+            }
+            BABYLON.MaterialHelper.PrepareDefinesForMisc(mesh, scene, false, this.pointsCloud, this.fogEnabled, defines);
+            // Attribs
+            BABYLON.MaterialHelper.PrepareDefinesForAttributes(mesh, defines, true, false);
+            // if (defines._areTexturesDirty) {                
+            //     if (scene.texturesEnabled) {
+            //         if (StandardMaterial.DiffuseTextureEnabled) {
+            //             var textures = [this.perlinNoiseTexture];
+            //             var textureDefines = ["DIFFUSENOISE"];
+            //             for (var i=0; i < textures.length; i++) {
+            //                 if (textures[i]) {
+            //                     if (!textures[i].isReady()) {
+            //                         return false;
+            //                     } else {
+            //                         (<any>defines)[textureDefines[i]] = true;
+            //                     }
+            //                 }
+            //             }
+            //         }
+            //     }
+            // }
+            // Get correct effect      
+            if (defines.isDirty) {
+                defines.markAsProcessed();
+                scene.resetCachedMaterial();
+                // Fallbacks
+                var fallbacks = new BABYLON.EffectFallbacks();
+                if (defines.FOG) {
+                    fallbacks.addFallback(1, "FOG");
+                }
+                //Attributes
+                var attribs = [BABYLON.VertexBuffer.PositionKind];
+                if (defines.VERTEXCOLOR) {
+                    attribs.push(BABYLON.VertexBuffer.ColorKind);
+                }
+                var shaderName = "anotherSky";
+                var join = defines.toString();
+                subMesh.setEffect(scene.getEngine().createEffect(shaderName, attribs, ["world", "viewProjection", "view",
+                    "vFogInfos", "vFogColor", "pointSize", "vClipPlane",
+                    "luminance", "turbidity", "rayleigh", "mieCoefficient", "mieDirectionalG", "sunPosition",
+                    "cameraPosition", "time",
+                    "timeScale", "cloudScale", "cover", "softness", "brightness", "noiseOctaves", "curlStrain",
+                    "skyTime",
+                    "turbidity2", "rayleigh2", "mieCoefficient2"
+                ], [], join, fallbacks, this.onCompiled, this.onError), defines);
+            }
+            if (!subMesh.effect || !subMesh.effect.isReady()) {
+                return false;
+            }
+            this._renderId = scene.getRenderId();
+            this._wasPreviouslyReady = true;
+            return true;
+        };
+        anotherSkyMaterial.prototype.bindForSubMesh = function (world, mesh, subMesh) {
+            var scene = this.getScene();
+            var defines = subMesh._materialDefines;
+            if (!defines) {
+                return;
+            }
+            var effect = subMesh.effect;
+            if (!effect) {
+                return;
+            }
+            this._activeEffect = effect;
+            // Matrices        
+            this.bindOnlyWorldMatrix(world);
+            this._activeEffect.setMatrix("viewProjection", scene.getTransformMatrix());
+            // if (scene.getCachedMaterial() !== this) {
+            //     if (this.perlinNoiseTexture) {
+            //         this._activeEffect.setTexture("perlinNoiseSampler", this.perlinNoiseTexture);
+            //     }
+            // }
+            if (this._mustRebind(scene, effect)) {
+                // Clip plane
+                if (scene.clipPlane) {
+                    var clipPlane = scene.clipPlane;
+                    this._activeEffect.setFloat4("vClipPlane", clipPlane.normal.x, clipPlane.normal.y, clipPlane.normal.z, clipPlane.d);
+                }
+                // Point size
+                if (this.pointsCloud) {
+                    this._activeEffect.setFloat("pointSize", this.pointSize);
+                }
+            }
+            // View
+            if (scene.fogEnabled && mesh.applyFog && scene.fogMode !== BABYLON.Scene.FOGMODE_NONE) {
+                this._activeEffect.setMatrix("view", scene.getViewMatrix());
+            }
+            // Fog
+            BABYLON.MaterialHelper.BindFogParameters(scene, mesh, this._activeEffect);
+            // Time
+            this.lastTime += scene.getEngine().getDeltaTime();
+            this._activeEffect.setFloat("time", this.lastTime / 100.0);
+            this._activeEffect.setFloat("timeScale", this.timeScale);
+            this._activeEffect.setFloat("cloudScale", this.cloudScale);
+            this._activeEffect.setFloat("cover", this.cover);
+            this._activeEffect.setFloat("softness", this.softness);
+            this._activeEffect.setFloat("brightness", this.brightness);
+            this._activeEffect.setFloat("noiseOctaves", this.noiseOctaves);
+            this._activeEffect.setFloat("curlStrain", this.curlStrain);
+            this._activeEffect.setFloat("skyTime", this.skyTime);
+            // Sky
+            var camera = scene.activeCamera;
+            if (camera) {
+                var cameraWorldMatrix = camera.getWorldMatrix();
+                this._cameraPosition.x = cameraWorldMatrix.m[12];
+                this._cameraPosition.y = cameraWorldMatrix.m[13];
+                this._cameraPosition.z = cameraWorldMatrix.m[14];
+                this._activeEffect.setVector3("cameraPosition", this._cameraPosition);
+            }
+            if (this.luminance > 0) {
+                this._activeEffect.setFloat("luminance", this.luminance);
+            }
+            this._activeEffect.setFloat("turbidity", this.turbidity);
+            this._activeEffect.setFloat("rayleigh", this.rayleigh);
+            this._activeEffect.setFloat("mieCoefficient", this.mieCoefficient);
+            this._activeEffect.setFloat("turbidity2", this.turbidity2);
+            this._activeEffect.setFloat("rayleigh2", this.rayleigh2);
+            this._activeEffect.setFloat("mieCoefficient2", this.mieCoefficient2);
+            this._activeEffect.setFloat("mieDirectionalG", this.mieDirectionalG);
+            if (!this.useSunPosition) {
+                var theta = Math.PI * (this.inclination - 0.5);
+                var phi = 2 * Math.PI * (this.azimuth - 0.5);
+                this.sunPosition.x = this.distance * Math.cos(phi);
+                this.sunPosition.y = this.distance * Math.sin(phi) * Math.sin(theta);
+                this.sunPosition.z = this.distance * Math.sin(phi) * Math.cos(theta);
+            }
+            this._activeEffect.setVector3("sunPosition", this.sunPosition);
+            this._afterBind(mesh, this._activeEffect);
+        };
+        anotherSkyMaterial.prototype.getAnimatables = function () {
+            var results = [];
+            if (this.mixTexture && this.mixTexture.animations && this.mixTexture.animations.length > 0) {
+                results.push(this.mixTexture);
+            }
+            return results;
+        };
+        // public getActiveTextures(): BaseTexture[] {
+        //     var activeTextures = super.getActiveTextures();
+        //     if (this._perlinNoiseTexture) {
+        //         activeTextures.push(this._perlinNoiseTexture);
+        //     }
+        //     return activeTextures;
+        // }
+        // public hasTexture(texture: BaseTexture): boolean {
+        //     if (super.hasTexture(texture)) {
+        //         return true;
+        //     }
+        //     if (this._perlinNoiseTexture === texture) {
+        //         return true;
+        //     } 
+        //     return false;   
+        // }
+        anotherSkyMaterial.prototype.dispose = function (forceDisposeEffect) {
+            if (this.mixTexture) {
+                this.mixTexture.dispose();
+            }
+            _super.prototype.dispose.call(this, forceDisposeEffect);
+        };
+        anotherSkyMaterial.prototype.clone = function (name) {
+            var _this = this;
+            return BABYLON.SerializationHelper.Clone(function () { return new anotherSkyMaterial(name, _this.getScene()); }, this);
+        };
+        anotherSkyMaterial.prototype.serialize = function () {
+            var serializationObject = BABYLON.SerializationHelper.Serialize(this);
+            serializationObject.customType = "BABYLON.anotherSkyMaterial";
+            return serializationObject;
+        };
+        anotherSkyMaterial.prototype.getClassName = function () {
+            return "anotherSkyMaterial";
+        };
+        // Statics
+        anotherSkyMaterial.Parse = function (source, scene, rootUrl) {
+            return BABYLON.SerializationHelper.Parse(function () { return new anotherSkyMaterial(source.name, scene); }, source, scene, rootUrl);
+        };
+        __decorate([
+            BABYLON.serialize()
+        ], anotherSkyMaterial.prototype, "luminance", void 0);
+        __decorate([
+            BABYLON.serialize()
+        ], anotherSkyMaterial.prototype, "turbidity", void 0);
+        __decorate([
+            BABYLON.serialize()
+        ], anotherSkyMaterial.prototype, "rayleigh", void 0);
+        __decorate([
+            BABYLON.serialize()
+        ], anotherSkyMaterial.prototype, "mieCoefficient", void 0);
+        __decorate([
+            BABYLON.serialize()
+            //public turbidity: number = 10.0;
+        ], anotherSkyMaterial.prototype, "turbidity2", void 0);
+        __decorate([
+            BABYLON.serialize()
+            //public rayleigh: number = 2.0;
+        ], anotherSkyMaterial.prototype, "rayleigh2", void 0);
+        __decorate([
+            BABYLON.serialize()
+            //public mieCoefficient: number = 0.005;
+        ], anotherSkyMaterial.prototype, "mieCoefficient2", void 0);
+        __decorate([
+            BABYLON.serialize()
+        ], anotherSkyMaterial.prototype, "mieDirectionalG", void 0);
+        __decorate([
+            BABYLON.serialize()
+        ], anotherSkyMaterial.prototype, "distance", void 0);
+        __decorate([
+            BABYLON.serialize()
+        ], anotherSkyMaterial.prototype, "inclination", void 0);
+        __decorate([
+            BABYLON.serialize()
+        ], anotherSkyMaterial.prototype, "azimuth", void 0);
+        __decorate([
+            BABYLON.serializeAsVector3()
+        ], anotherSkyMaterial.prototype, "sunPosition", void 0);
+        __decorate([
+            BABYLON.serialize()
+        ], anotherSkyMaterial.prototype, "useSunPosition", void 0);
+        __decorate([
+            BABYLON.serializeAsTexture()
+        ], anotherSkyMaterial.prototype, "mixTexture", void 0);
+        return anotherSkyMaterial;
+    }(BABYLON.PushMaterial));
+    BABYLON.anotherSkyMaterial = anotherSkyMaterial;
+})(BABYLON || (BABYLON = {}));
+
+//# sourceMappingURL=babylon.anotherSkyMaterial.js.map
+
+BABYLON.Effect.ShadersStore['anotherSkyVertexShader'] = "precision highp float;\n\nattribute vec3 position;\n#ifdef VERTEXCOLOR\nattribute vec4 color;\n#endif\n\nuniform mat4 world;\nuniform mat4 view;\nuniform mat4 viewProjection;\n#ifdef POINTSIZE\nuniform float pointSize;\n#endif\n\nvarying vec3 vPositionW;\n#ifdef VERTEXCOLOR\nvarying vec4 vColor;\n#endif\n#include<clipPlaneVertexDeclaration>\n#include<fogVertexDeclaration>\nvoid main(void) {\ngl_Position=viewProjection*world*vec4(position,1.0);\nvec4 worldPos=world*vec4(position,1.0);\nvPositionW=vec3(worldPos);\n\n#include<clipPlaneVertex>\n\n#include<fogVertex>\n\n#ifdef VERTEXCOLOR\nvColor=color;\n#endif\n\n#ifdef POINTSIZE\ngl_PointSize=pointSize;\n#endif\n}\n";
+BABYLON.Effect.ShadersStore['anotherSkyPixelShader'] = "precision highp float;\n\nvarying vec3 vPositionW;\n#ifdef VERTEXCOLOR\nvarying vec4 vColor;\n#endif\n#include<clipPlaneFragmentDeclaration>\n\nuniform vec3 cameraPosition;\nuniform float luminance;\nuniform float turbidity;\nuniform float rayleigh;\nuniform float mieCoefficient;\nuniform float mieDirectionalG;\nuniform vec3 sunPosition;\nuniform float skyTime;\nuniform float turbidity2;\nuniform float rayleigh2;\nuniform float mieCoefficient2;\n\nuniform float timeScale;\nuniform float cloudScale;\nuniform float cover;\nuniform float softness;\nuniform float brightness;\nuniform float noiseOctaves;\nuniform float curlStrain;\nvec2 add=vec2(1.0,0.0);\nfloat cloudy;\n#define FLATTEN .2\n\n#include<fogFragmentDeclaration>\nuniform float time;\n\nconst float e=2.71828182845904523536028747135266249775724709369995957;\nconst float pi=3.141592653589793238462643383279502884197169;\nconst float n=1.0003;\nconst float N=2.545E25;\nconst float pn=0.035;\nconst vec3 lambda=vec3(680E-9,550E-9,450E-9);\nconst vec3 K=vec3(0.686,0.678,0.666);\nconst float v=4.0;\nconst float rayleighZenithLength=8.4E3;\nconst float mieZenithLength=1.25E3;\nconst vec3 up=vec3(0.0,1.0,0.0);\nconst float EE=1000.0;\nconst float sunAngularDiameterCos=0.999956676946448443553574619906976478926848692873900859324;\nconst float cutoffAngle=pi/1.95;\nconst float steepness=1.5;\nvec3 totalRayleigh(vec3 lambda)\n{\nreturn (8.0*pow(pi,3.0)*pow(pow(n,2.0)-1.0,2.0)*(6.0+3.0*pn))/(3.0*N*pow(lambda,vec3(4.0))*(6.0-7.0*pn));\n}\nvec3 simplifiedRayleigh()\n{\nreturn 0.0005/vec3(94,40,18);\n}\nfloat rayleighPhase(float cosTheta)\n{ \nreturn (3.0/(16.0*pi))*(1.0+pow(cosTheta,2.0));\n}\nvec3 totalMie(vec3 lambda,vec3 K,float T)\n{\nfloat c=(0.2*T )*10E-18;\nreturn 0.434*c*pi*pow((2.0*pi)/lambda,vec3(v-2.0))*K;\n}\nfloat hgPhase(float cosTheta,float g)\n{\nreturn (1.0/(4.0*pi))*((1.0-pow(g,2.0))/pow(1.0-2.0*g*cosTheta+pow(g,2.0),1.5));\n}\nfloat sunIntensity(float zenithAngleCos)\n{\nreturn EE*max(0.0,1.0-exp(-((cutoffAngle-acos(zenithAngleCos))/steepness)));\n}\nfloat A=0.15;\nfloat B=0.50;\nfloat C=0.10;\nfloat D=0.20;\nfloat EEE=0.02;\nfloat F=0.30;\nfloat W=1000.0;\nvec3 Uncharted2Tonemap(vec3 x)\n{\nreturn ((x*(A*x+C*B)+D*EEE)/(x*(A*x+B)+D*F))-EEE/F;\n}\n\nfloat saturate(float num)\n{\nreturn clamp(num,0.0,1.0);\n}\n\n#define MOD3 vec3(3.07965,7.1235,4.998784)\n#define HASHSCALE1 .1031\n\n\n\n\n\n\nfloat hash(float p)\n{\nvec3 p3=fract(vec3(p)*HASHSCALE1);\np3+=dot(p3,p3.yzx+19.19);\n\nreturn fract((p3.x+p3.y)*p3.z);\n}\nfloat Noise3d(vec3 p)\n{\nvec3 i=floor(p);\nvec3 f=fract(p); \n\n\n\nconst vec3 step=vec3(110,241,171);\nfloat n=dot(i,step);\nvec3 u=f*f*(3.0-2.0*f);\nreturn mix(mix(mix( hash(n+dot(step,vec3(0,0,0))),hash(n+dot(step,vec3(1,0,0))),u.x),\nmix( hash(n+dot(step,vec3(0,1,0))),hash(n+dot(step,vec3(1,1,0))),u.x),u.y),\nmix(mix( hash(n+dot(step,vec3(0,0,1))),hash(n+dot(step,vec3(1,0,1))),u.x),\nmix( hash(n+dot(step,vec3(0,1,1))),hash(n+dot(step,vec3(1,1,1))),u.x),u.y),u.z);\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n}\nmat4 rotationMatrix(vec3 axis,float angle) {\naxis=normalize(axis);\nfloat s=sin(angle);\nfloat c=cos(angle);\nfloat oc=1.0-c;\nreturn mat4(oc*axis.x*axis.x+c,oc*axis.x*axis.y-axis.z*s,oc*axis.z*axis.x+axis.y*s,0.0,\noc*axis.x*axis.y+axis.z*s,oc*axis.y*axis.y+c,oc*axis.y*axis.z-axis.x*s,0.0,\noc*axis.z*axis.x-axis.y*s,oc*axis.y*axis.z+axis.x*s,oc*axis.z*axis.z+c,0.0,\n0.0,0.0,0.0,1.0);\n}\nvec3 rotate(vec3 v,vec3 axis,float angle) {\nmat4 m=rotationMatrix(axis,angle);\nreturn (m*vec4(v,1.0)).xyz;\n}\nvec3 rotatepos(vec3 pos)\n{\npos=pos+Noise3d(pos*0.2)*0.005;\nfloat rot=curlStrain;\nfloat sinRot=sin(rot);\nfloat cosRot=cos(rot);\nmat3 rotMat=mat3(cosRot,0,sinRot,0,1,0,-sinRot,0,cosRot);\nreturn pos*rotMat;\n}\nfloat FBM(vec3 p,float ts,float Octaves)\n{\np*=.5;\nfloat f=0.0;\nfloat amplitude=0.5;\nfor(int i=0;i<int(Octaves);i++)\n{\nf+=amplitude*Noise3d(rotate(p,vec3(0.0,1.0,0.0),time*ts/100.0*(1.0-amplitude)));\np*=3.0;\n\namplitude*=0.5;\n}\nreturn f;\n}\nvec3 skycolor(vec3 position,float turb,float rayl,float mieCoe)\n{\nfloat sunfade=1.0-clamp(1.0-exp((position.y/450000.0)),0.0,1.0);\nfloat rayleighCoefficient=rayl-(1.0*(1.0-sunfade));\nvec3 sunDirection=normalize(position);\nfloat sunE=sunIntensity(dot(sunDirection,up));\nvec3 betaR=simplifiedRayleigh()*rayleighCoefficient;\nvec3 betaM=totalMie(lambda,K,turb)*mieCoe;\nfloat zenithAngle=acos(max(0.0,dot(up,normalize(vPositionW-cameraPosition))));\nfloat sR=rayleighZenithLength/(cos(zenithAngle)+0.15*pow(93.885-((zenithAngle*180.0)/pi),-1.253));\nfloat sM=mieZenithLength/(cos(zenithAngle)+0.15*pow(93.885-((zenithAngle*180.0)/pi),-1.253));\nvec3 Fex=exp(-(betaR*sR+betaM*sM));\nfloat cosTheta=dot(normalize(vPositionW-cameraPosition),sunDirection);\nfloat rPhase=rayleighPhase(cosTheta*0.5+0.5);\nvec3 betaRTheta=betaR*rPhase;\nfloat mPhase=hgPhase(cosTheta,mieDirectionalG);\nvec3 betaMTheta=betaM*mPhase;\nvec3 Lin=pow(sunE*((betaRTheta+betaMTheta)/(betaR+betaM))*(1.0-Fex),vec3(1.5));\nLin*=mix(vec3(1.0),pow(sunE*((betaRTheta+betaMTheta)/(betaR+betaM))*Fex,vec3(1.0/2.0)),clamp(pow(1.0-dot(up,sunDirection),5.0),0.0,1.0));\nvec3 direction=normalize(vPositionW-cameraPosition);\nfloat theta=acos(direction.y);\nfloat phi=atan(direction.z,direction.x);\nvec2 uv=vec2(phi,theta)/vec2(2.0*pi,pi)+vec2(0.5,0.0);\nvec3 L0=vec3(0.1)*Fex;\nfloat sundisk=smoothstep(sunAngularDiameterCos,sunAngularDiameterCos+0.00002,cosTheta);\nL0+=(sunE*19000.0*Fex)*sundisk;\nvec3 whiteScale=1.0/Uncharted2Tonemap(vec3(W));\nvec3 texColor=(Lin+L0); \ntexColor*=0.04 ;\ntexColor+=vec3(0.0,0.001,0.0025)*0.3;\nfloat g_fMaxLuminance=1.0;\nfloat fLumScaled=0.1/luminance; \nfloat fLumCompressed=(fLumScaled*(1.0+(fLumScaled/(g_fMaxLuminance*g_fMaxLuminance))))/(1.0+fLumScaled); \nfloat ExposureBias=fLumCompressed;\nvec3 curr=Uncharted2Tonemap((log2(2.0/pow(luminance,4.0)))*texColor);\n\n\n\nvec3 retColor=curr*whiteScale;\nreturn retColor;\n}\n\n#define HASHSCALE1 .1031\n#define HASHSCALE3 vec3(.1031,.1030,.0973)\n\n\nfloat hash11(float p)\n{\nvec3 p3=fract(vec3(p)*HASHSCALE1);\np3+=dot(p3,p3.yzx+19.19);\nreturn fract((p3.x+p3.y)*p3.z);\n}\n\n\nfloat hash12(vec2 p)\n{\nvec3 p3=fract(vec3(p.xyx)*HASHSCALE1);\np3+=dot(p3,p3.yzx+19.19);\nreturn fract((p3.x+p3.y)*p3.z);\n}\n\nvec2 hash22(vec2 p)\n{\nvec3 p3=fract(vec3(p.xyx)*HASHSCALE3);\np3+=dot(p3,p3.yzx+19.19);\nreturn fract((p3.xx+p3.yz)*p3.zy);\n}\nfloat dseg( vec2 ba,vec2 pa )\n{\nfloat h=clamp( dot(pa,ba)/dot(ba,ba),-0.2,1. ); \nreturn length( pa-ba*h );\n\n\n}\nvec3 lightning (vec2 p)\n{\nvec2 d;\nvec2 tgt=vec2(0.);\nvec3 col=vec3(0.);\nfloat mdist=10000.;\nfloat t=hash11(floor(20.*time));\ntgt=vec2(0.0);\ntgt+=4.*hash22(tgt+t)-1.5;\nfloat c=0.0;\nif(hash(t+2.3)>.6)\n{\nfor (int i=0; i<10; i++) {\nvec2 dtgt=tgt-p; \nd=.05*(vec2(-.5,-1.)+hash22(vec2(float(i),t)));\nfloat dist =dseg(d,dtgt);\nmdist=min(mdist,dist);\ntgt-=d;\nc=exp(-.5*dist)+exp(-55.*mdist);\ncol=c*vec3(.7,.8,1.);\n}\n}\nreturn col;\n}\nvoid main(void) {\n\n#include<clipPlaneFragment>\n\n\nvec3 newSunPosition=rotate(sunPosition,vec3(0.0,0.0,1.0),skyTime);\nvec3 newMoonPosition=-newSunPosition;\nvec3 retColorday=skycolor(newSunPosition,turbidity,rayleigh,mieCoefficient);\nvec3 retColornight=skycolor(newMoonPosition,turbidity2,rayleigh2,mieCoefficient2);\nvec3 retColor=retColorday+retColornight;\n\n\nfloat alpha=1.0;\n#ifdef VERTEXCOLOR\nretColor.rgb*=vColor.rgb;\n#endif\n#ifdef VERTEXALPHA\nalpha*=vColor.a;\n#endif\n\nvec4 color=clamp(vec4(retColor.rgb,alpha),0.0,1.0);\n#ifdef DIFFUSENOISE\nvec3 pos=normalize(vPositionW-cameraPosition);\n\nfloat a=0.5;\n\nfloat staramount=1./(-1.-a)*newSunPosition.y-a/(-1.-a);\nstaramount=sin(staramount*pi/2.);\nfloat starcolor=1.0;\nfloat starScale=0.002;\nfloat starCover=0.31;\nfloat startimeScale=0.01;\nvec3 starpos=pos/starScale;\nstarpos=rotate(starpos,vec3(0.0,1.0,0.0),time*startimeScale/1000.);\nfloat h1=FBM(starpos,startimeScale,4.0);\nfloat h2=h1;\nfloat stars1=smoothstep(1.0-starCover,min((1.0-starCover)+softness*2.0,1.0),h1);\nfloat stars2=smoothstep(1.0-starCover,min((1.0-starCover)+softness,1.0),h2);\nfloat starsFormComb=saturate(stars1+stars2)*staramount;\nvec4 starskyCol=vec4(0.6,0.8,1.0,1.0);\nfloat starCol=saturate(saturate(1.0-pow(h1,1.0)*0.2)*starcolor);\nvec4 stars1Color=vec4(starCol,starCol,starCol,1.0);\nvec4 stars2Color=mix(stars1Color,starskyCol,0.25);\nvec4 starColComb=mix(stars1Color,stars2Color,saturate(stars2-stars1));\ncolor=mix(color,starColComb,starsFormComb);\n\n\nfloat bright=newSunPosition.y;\nbright=max(0.0,bright);\nbright=sin(bright*pi/2.);\nvec3 cloudpos=pos/cloudScale;\n\ncloudpos=rotate(cloudpos,vec3(0.0,1.0,0.0),time*timeScale/1000.);\nfloat color1=FBM(cloudpos,timeScale,noiseOctaves);\n\nfloat color2=color1;\nfloat clouds1=smoothstep(1.0-cover,min((1.0-cover)+softness*2.0,1.0),color1);\nfloat clouds2=smoothstep(1.0-cover,min((1.0-cover)+softness,1.0),color2);\nfloat cloudsFormComb=saturate(clouds1+clouds2);\n\nvec4 skyCol=vec4(0.6,0.8,1.0,1.0);\nfloat cloudCol=saturate(saturate(1.0-pow(color1,1.0)*0.2)*bright);\nvec4 clouds1Color=vec4(cloudCol,cloudCol,cloudCol,1.0);\nvec4 clouds2Color=mix(clouds1Color,skyCol,0.25);\nvec4 cloudColComb=mix(clouds1Color,clouds2Color,saturate(clouds2-clouds1));\ncolor=mix(color,cloudColComb,cloudsFormComb);\n#endif\n\n\n\n\n\n\n\n\n#include<fogFragment>\ngl_FragColor=color;\n}";
 
 
 

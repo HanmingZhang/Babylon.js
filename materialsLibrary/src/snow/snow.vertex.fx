@@ -2,6 +2,9 @@
 
 // Attributes
 attribute vec3 position;
+#ifdef UV1
+attribute vec2 uv;
+#endif
 #ifdef NORMAL
 attribute vec3 normal;
 #endif
@@ -17,6 +20,10 @@ attribute vec4 color;
 uniform mat4 view;
 uniform mat4 viewProjection;
 
+#ifdef DIFFUSE
+varying vec2 vDiffuseUV;
+#endif
+
 #ifdef DIFFUSEX
 varying vec2 vTextureUVX;
 #endif
@@ -31,6 +38,7 @@ varying vec2 vTextureUVZ;
 
 #ifdef DIFFUSENOISE
 varying vec2 vTextureUVN;
+uniform sampler2D perlinNoiseSampler;
 #endif
 
 uniform float tileSize;
@@ -59,6 +67,8 @@ uniform float time;
 
 varying float finalnoise;
 varying float normaly;
+
+uniform float noiseStrength;
 
 //float noisesize = 25.0;
 float translationSpeed = 0.0;
@@ -139,13 +149,6 @@ float perlinNoise(vec3 p)
 
 float zerotofive(float normaly)
 {
-	//return 0.5 + max(0.,normaly) * 0.5;
-	/*if (abs(normaly-1.0)<0.2)
-	{
-		return 0.5 + normaly * 0.5;
-	}
-	else
-		return 0.;*/
 	return max(0.,normaly);
 }
 
@@ -155,22 +158,35 @@ void main(void)
 
 	#include<instancesVertex>
     #include<bonesVertex>
-	vec3 positionup = position-vec3(0.0, 0.1, 0.0);
+	vec3 positionup = position;//-vec3(0.0, 0.1, 0.0);
 
 	//finalnoise = fnoise(vec2(position.x, position.z)/1000.);
-	vec2 uv = vec2(position.x, position.z);
+	vec2 noiseuv = vec2(position.x, position.z);
 	float dis = (
-        1.0 + perlinNoise(vec3(uv / vec2(noiseSize, noiseSize), /*time * 0.05*/0.0) * 8.0))
-        * (1.0 + (worley(uv, 32.0)+ 0.5 * worley(2.0 * uv, 32.0) + 0.25 * worley(4.0 * uv, 32.0))
+        1.0 + perlinNoise(vec3(noiseuv / vec2(noiseSize, noiseSize), /*time * 0.0001*/0.0) * 8.0))
+        * (1.0 + (worley(noiseuv, 32.0)+ 0.5 * worley(2.0 * noiseuv, 32.0) + 0.25 * worley(4.0 * noiseuv, 32.0))
     );
 	finalnoise = dis / 10.0;
-	
-	positionup.y += time / 10000.0 * zerotofive(normal.y) * finalnoise;// * texture2D(perlinNoiseSampler, vec2(position.x, position.z));// * cos(normal.z + normal.x);
+#ifdef DIFFUSENOISE
+	//vec4 noisecolor = texture2D(perlinNoiseSampler,noiseuv);
+	//finalnoise = noisecolor.r;
+#endif
+	//float temp = time / 10000.0 * zerotofive(normal.y) + finalnoise * 10.0 / 4.0 * noiseStrength - 1.0 * noiseStrength;
+	//positionup.y += temp;
+	//positionup.y = max(positionup.y, position.y);
+#ifdef PUSHUP
+	positionup.y += time * zerotofive(normal.y) * finalnoise;// * texture2D(perlinNoiseSampler, vec2(position.x, position.z));// * cos(normal.z + normal.x);
+#endif	
 	gl_Position = viewProjection * finalWorld * vec4(positionup, 1.0);
 
 	vec4 worldPos = finalWorld * vec4(positionup, 1.0);
 	vPositionW = vec3(worldPos);
 	normaly = normal.y;
+
+#ifdef DIFFUSE
+	vDiffuseUV = uv;
+	//vDiffuseUV.y -= 0.2;
+#endif
 
 #ifdef DIFFUSEX
 	vTextureUVX = worldPos.zy / tileSize;

@@ -7,6 +7,10 @@ uniform float width;
 uniform float height;
 uniform float edgeThickness;
 
+
+// mainly refer to the Implementation of Sobel Edge 
+// Detection Filter by Patrick Hebron
+
 void make_kernel(inout vec4 n[9], sampler2D tex, vec2 coord)
 {
 	float w = edgeThickness / width;

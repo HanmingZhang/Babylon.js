@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+	<title>Shaders Library</title>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.2/dat.gui.min.js"></script>
+	<script src="../tools/DevLoader/BabylonLoader.js"></script>
+	<script src="../loaders/src/OBJ/babylon.objFileLoader.js"></script>
+
+	<style>
+		html,
+		body {
+			width: 100%;
+			height: 100%;
+			padding: 0;
+			margin: 0;
+			overflow: hidden;
+		}
+		
+		#renderCanvas {
+			width: 100%;
+			height: 100%;
+		}
+		
+		#fps {
+			position: absolute;
+			background-color: black;
+			border: 2px solid red;
+			text-align: center;
+			font-size: 16px;
+			color: white;
+			top: 15px;
+			left: 10px;
+			width: 60px;
+			height: 20px;
+		}
+	</style>
+</head>
+
+<body>
+	<div id="fps">0</div>
+	<canvas id="renderCanvas"></canvas>
+
+	<script>
+	BABYLONDEVTOOLS.Loader.load(function() {
+		if (BABYLON.Engine.isSupported()) {
+			var canvas = document.getElementById("renderCanvas");
+			var engine = new BABYLON.Engine(canvas, true);					
+			BABYLONDEVTOOLS.Loader.debugShortcut(engine);	
+			var divFps = document.getElementById("fps");
+
+			var scene = new BABYLON.Scene(engine);
+
+			scene.clearColor = new BABYLON.Color3(0.9, 0.9, 0.85);
+			
+
+			// Camera
+			var camTarget = new BABYLON.Vector3(0.0, 8.0, 0.0)
+            var camera = new BABYLON.ArcRotateCamera("Camera", 2.42, 1.45, 69, camTarget, scene);
+
+            camera.attachControl(canvas, true);
+			camera.minZ = 0.1;
+			
+			// ----------------------------------------------------------------
+            // camera animation
+            var camAnimationRate = 30.0;
+            var camAnimationTotalFrame = 1500.0;
+
+            var gcamera2 = new BABYLON.ArcRotateCamera("camera2", 5.1, 1.45, 69, camTarget, scene);
+            gcamera2.setTarget(camTarget);
+
+            var gcamera3 = new BABYLON.ArcRotateCamera("camera3", 5.1, 1.45, 49, camTarget, scene);
+            gcamera3.setTarget(camTarget);
+
+            var gcamera4 = new BABYLON.ArcRotateCamera("camera4", 7.52, 1.46, 108.88, camTarget, scene);
+            gcamera4.setTarget(camTarget);
+
+			//scene.fogDensity
+            var radiusAnimation = new BABYLON.Animation("camRadius", "radius", camAnimationRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+            var alphaAnimation = new BABYLON.Animation("camAlpha", "alpha", camAnimationRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+            var betaAnimation = new BABYLON.Animation("camBeta", "beta", camAnimationRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+			//var fogAnimation = new BABYLON.Animation("sceneFogDensity", "fogDensity", camAnimationRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+
+            var keys1 = [
+            {
+                frame: 0,
+                value: camera.radius
+            }, 
+            {
+                frame : 0.25 * camAnimationTotalFrame,
+                value : gcamera2.radius
+            },
+            {
+                frame : 0.5 * camAnimationTotalFrame,
+                value : gcamera3.radius
+            },
+            {
+                frame : 0.75 * camAnimationTotalFrame,
+                value : gcamera3.radius
+            },
+            {
+                frame : camAnimationTotalFrame,
+                value : gcamera4.radius
+            }
+            ];
+            
+            var keys2 = [
+            {
+                frame: 0,
+                value: camera.alpha
+            }, 
+            {
+                frame : 0.25 * camAnimationTotalFrame,
+                value : gcamera2.alpha
+            },
+            {
+                frame : 0.5 * camAnimationTotalFrame,
+                value : gcamera3.alpha
+            },
+            {
+                frame : 0.75 * camAnimationTotalFrame,
+                value : gcamera3.alpha
+            },
+            {
+                frame : camAnimationTotalFrame,
+                value : gcamera4.alpha
+            }
+            ];
+            
+            var keys3 = [
+            {
+                frame: 0,
+                value: camera.beta
+            }, 
+            {
+                frame : 0.25 * camAnimationTotalFrame,
+                value : gcamera2.beta
+            },
+            {
+                frame : 0.5 * camAnimationTotalFrame,
+                value : gcamera3.beta
+            },
+            {
+                frame : 0.75 * camAnimationTotalFrame,
+                value : gcamera3.beta
+            },
+            {
+                frame : camAnimationTotalFrame,
+                value : gcamera4.beta
+            }
+            ];
+                
+            radiusAnimation.setKeys(keys1);
+            alphaAnimation.setKeys(keys2);
+            betaAnimation.setKeys(keys3);
+            camera.animations.push(radiusAnimation);
+            camera.animations.push(alphaAnimation);
+            camera.animations.push(betaAnimation);
+
+			// ----------------------------------------------------------------
+            // add keyboard event
+            window.addEventListener("keydown", function (evt) {
+                
+                // P key
+                if(evt.keyCode === 80){
+ 
+                  scene.beginAnimation(camera, 0, camAnimationTotalFrame, false, 1);
+                }
+
+            });
+
+			// var camera = new BABYLON.ArcRotateCamera("Camera", Math.PI / 2, Math.PI / 6, 1.5, BABYLON.Vector3.Zero(), scene);
+			// camera.attachControl(canvas, true);
+			// camera.minZ = 0.1;
+
+			var down = -7.5;
+			var groundscale = 1.0;
+
+
+			//scene.clearColor = new BABYLON.Color4(0.02, 0.02, 0.02, 1.0);
+			scene.imageProcessingConfiguration.contrast = 1.0;
+			scene.imageProcessingConfiguration.exposure = 1.0;
+			scene.imageProcessingConfiguration.toneMappingEnabled = true;
+
+			// var hdrTexture = new BABYLON.CubeTexture.CreateFromPrefilteredData("../assets/environment.dds", scene);
+			// hdrTexture.gammaSpace = false;
+
+			//var sun = new BABYLON.PointLight("Omni0", new BABYLON.Vector3(0, 100, 0), scene);
+			//sun.intensity = 0.5;
+			//var light = new BABYLON.DirectionalLight("DirectionalLight", new BABYLON.Vector3(0, -1, 0), scene);
+			var light = new BABYLON.HemisphericLight("HemiLight", new BABYLON.Vector3(0.0, 1.0, 0.0), scene);
+
+			// //var skyMaterial = new BABYLON.SkyMaterial("skyMaterial", scene);
+			// var skyMaterial = new BABYLON.anotherSkyMaterial("skyMaterial", scene);
+			// //skyMaterial.perlinNoiseTexture = new BABYLON.Texture("/playground/textures/equirectangular_noise_small.png", scene);
+			// //skyMaterial.perlinNoiseTexture = new BABYLON.Texture("/playground/textures/gray_noise.png", scene);
+			// skyMaterial.backFaceCulling = false;
+			// skyMaterial.skyTime = 4.5;
+
+			// var skybox = BABYLON.Mesh.CreateBox("skyBox", 1000.0, scene);
+			// //var skybox = BABYLON.MeshBuilder.CreateSphere('sphere', {segments:16, diameter:1000}, scene);
+			// skybox.material = skyMaterial;
+			
+			// Ground
+			//var ground = BABYLON.Mesh.CreateGroundFromHeightMap("ground", "src/heightMap.png", 100, 100, 100, 0, 10, scene, false);
+			var ground = BABYLON.Mesh.CreateGround("ground", 512, 512, 32, scene, false);
+			ground.position.y = -1.05 + down;
+		
+			var groundMaterial = new BABYLON.StandardMaterial("ground", scene);
+			groundMaterial.diffuseTexture = new BABYLON.Texture("src/ground.jpg", scene);
+			groundMaterial.diffuseTexture.uScale = 6;
+			groundMaterial.diffuseTexture.vScale = 6;
+			groundMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+			
+			ground.material = groundMaterial;
+		
+// Snow material
+
+			var delay = -10.0 * 10000.0;
+			var delay2 = -8.0 * 10000.0;
+
+			// Push up
+
+			var snowMaterial = new BABYLON.snowMaterial("snowmaterial", scene);
+    		snowMaterial.diffuseTextureX = new BABYLON.Texture("/playground/textures/snow.jpg", scene);
+			snowMaterial.diffuseTextureY = snowMaterial.diffuseTextureX;
+    		snowMaterial.diffuseTextureZ = snowMaterial.diffuseTextureX;
+    		snowMaterial.normalTextureX = new BABYLON.Texture("/playground/textures/snown.jpg", scene);
+    		snowMaterial.normalTextureY = snowMaterial.normalTextureX;
+			snowMaterial.normalTextureZ = snowMaterial.normalTextureX;
+			snowMaterial.tileSize = 5.0;
+			snowMaterial.pushup = 1;
+			snowMaterial.snowlimit = 5.5;
+			snowMaterial.lastTime = delay;
+			snowMaterial.speed = 0.9;
+
+			var housesnowMaterial = new BABYLON.snowMaterial("snowmaterial", scene);
+    		housesnowMaterial.diffuseTextureX = snowMaterial.diffuseTextureX;
+			housesnowMaterial.diffuseTextureY = snowMaterial.diffuseTextureX;
+    		housesnowMaterial.diffuseTextureZ = snowMaterial.diffuseTextureX;
+    		housesnowMaterial.normalTextureX = snowMaterial.normalTextureX;
+    		housesnowMaterial.normalTextureY = snowMaterial.normalTextureX;
+			housesnowMaterial.normalTextureZ = snowMaterial.normalTextureX;
+			housesnowMaterial.tileSize = 5.0;
+			housesnowMaterial.pushup = 1;
+			housesnowMaterial.snowlimit = 5.5;
+			housesnowMaterial.speed = 1.0;
+			housesnowMaterial.lastTime = delay2;
+
+			var smallsnowMaterial = new BABYLON.snowMaterial("smallsnowMaterial", scene);
+    		smallsnowMaterial.diffuseTextureX = snowMaterial.diffuseTextureX;
+			smallsnowMaterial.diffuseTextureY = snowMaterial.diffuseTextureX;
+    		smallsnowMaterial.diffuseTextureZ = snowMaterial.diffuseTextureX;
+    		smallsnowMaterial.normalTextureX = snowMaterial.normalTextureX;
+    		smallsnowMaterial.normalTextureY = snowMaterial.normalTextureX;
+			smallsnowMaterial.normalTextureZ = smallsnowMaterial.normalTextureX;
+			smallsnowMaterial.tileSize = 5.0;
+			smallsnowMaterial.pushup = 1;
+			smallsnowMaterial.snowlimit = 2.0;
+			smallsnowMaterial.speed = 1.0;
+			smallsnowMaterial.lastTime = delay2;
+
+			//No Push Up
+
+			var nopushspeed = 1.0;
+
+			var islandsnowmaterial = new BABYLON.snowMaterial("snowmaterial", scene);
+    		islandsnowmaterial.diffuseTextureX = new BABYLON.Texture("/playground/textures/rock.png", scene);
+			islandsnowmaterial.diffuseTextureY = snowMaterial.diffuseTextureX;
+    		islandsnowmaterial.diffuseTextureZ = islandsnowmaterial.diffuseTextureX;
+    		islandsnowmaterial.normalTextureX = new BABYLON.Texture("/playground/textures/rockn.png", scene);
+    		islandsnowmaterial.normalTextureY = snowMaterial.normalTextureX;
+			islandsnowmaterial.normalTextureZ = islandsnowmaterial.normalTextureX;
+			//snowmaterial.perlinNoiseTexture = new BABYLON.perlinNoiseStaticProceduralTexture("perlinNoisePT", 512, scene);
+			//islandsnowmaterial.perlinNoiseTexture = new BABYLON.Texture("/playground/textures/perlin.png", scene);
+			islandsnowmaterial.tileSize = 5.0;
+			islandsnowmaterial.pushup = 0;
+			islandsnowmaterial.speed = 1.0 * nopushspeed;
+
+			var farmHouseSnowMaterial = new BABYLON.snowMaterial("snow", scene);
+    		farmHouseSnowMaterial.diffuseTextureX = snowMaterial.diffuseTextureX;
+			farmHouseSnowMaterial.diffuseTextureY = snowMaterial.diffuseTextureX;
+			//snow.diffuseTextureY = new BABYLON.PerlinNoiseProceduralTexture("perlinNoisePT", 512, scene);
+    		farmHouseSnowMaterial.diffuseTextureZ = snowMaterial.diffuseTextureX;
+    		farmHouseSnowMaterial.normalTextureX = snowMaterial.normalTextureX;
+    		farmHouseSnowMaterial.normalTextureY = snowMaterial.normalTextureX;
+			farmHouseSnowMaterial.normalTextureZ = snowMaterial.normalTextureX;
+			//snow.perlinNoiseTexture = new BABYLON.perlinNoiseStaticProceduralTexture("perlinNoisePT", 512, scene);
+			farmHouseSnowMaterial.perlinNoiseTexture = new BABYLON.Texture("/playground/textures/perlin.png", scene);
+    		farmHouseSnowMaterial.specularPower = 64;
+			farmHouseSnowMaterial.tileSize = 10.0;
+			farmHouseSnowMaterial.diffuseTexture = new BABYLON.Texture("/playground/scenes/farmHouse/diffuse.jpg", scene);
+			farmHouseSnowMaterial.normalTexture = new BABYLON.Texture("/playground/scenes/farmHouse/normal.jpg", scene);
+			farmHouseSnowMaterial.pushup = 0;
+			farmHouseSnowMaterial.speed = 1.0 * nopushspeed;
+
+			var baresnowmaterial = new BABYLON.snowMaterial("snowmaterial", scene);
+    		baresnowmaterial.diffuseTextureX = new BABYLON.Texture("/playground/textures/tree/bare_diffuse.jpg", scene);
+			baresnowmaterial.diffuseTextureY = snowMaterial.diffuseTextureX;
+    		baresnowmaterial.diffuseTextureZ = baresnowmaterial.diffuseTextureX;
+    		baresnowmaterial.normalTextureX = new BABYLON.Texture("/playground/textures/tree/bare_normal.jpg", scene);
+    		baresnowmaterial.normalTextureY = snowMaterial.normalTextureX;
+			baresnowmaterial.normalTextureZ = baresnowmaterial.normalTextureX;
+			baresnowmaterial.perlinNoiseTexture = new BABYLON.Texture("/playground/textures/perlin.png", scene);
+			//snowmaterial.perlinNoiseTexture = new BABYLON.perlinNoiseStaticProceduralTexture("perlinNoisePT", 512, scene);
+			//baresnowmaterial.perlinNoiseTexture = new BABYLON.Texture("/playground/textures/perlin.png", scene);
+			baresnowmaterial.speed = 0.2 * nopushspeed;
+			baresnowmaterial.tileSize = 10.0;
+			baresnowmaterial.pushup = 0;
+			baresnowmaterial.noiseSize = 1.0;
+
+			
+			//Box
+
+			//var box = BABYLON.MeshBuilder.CreateBox("box", {}, scene);
+			//box.scaling = new BABYLON.Vector3(35., 10., 50.);
+			//box.position = new BABYLON.Vector3(0, -5, 7);
+
+			// water
+			var waterMesh = BABYLON.Mesh.CreateGround("waterMesh", 512, 512, 32, scene, false);
+			waterMesh.position.y = 2.5 + down;
+			var water = new BABYLON.WaterMaterial("water", scene, new BABYLON.Vector2(512, 512));
+			water.backFaceCulling = true;
+		
+		
+			water.bumpTexture = new BABYLON.Texture("../assets/waterbump.png", scene);
+			//water.raindropTexture = new BABYLON.Texture("../assets/Raindrops_normal.bmp", scene);
+			water.windForce = -5;
+			water.waveHeight = 0.2;
+			water.bumpHeight = 0.05;
+			water.waterColor = new BABYLON.Color3(0.015, 0.23, 0.39);
+			water.colorBlendFactor = 0.2;
+			//water.addToRenderList(skybox);
+			water.addToRenderList(ground);
+			//water.addToRenderList(groundsnow);
+			
+			waterMesh.material = water;
+
+// Lamp light
+            var lamplight = new BABYLON.SpotLight("spotLight", new BABYLON.Vector3(10.2, 19, -20.5), new BABYLON.Vector3(0, -1, 0), Math.PI / 3, 50, scene);
+            
+            var lampSphere = BABYLON.Mesh.CreateSphere("LampSphere", 16, 1.0, scene);
+            lampSphere.material = new BABYLON.StandardMaterial("bmat", scene);
+            lampSphere.material.diffuseColor = new BABYLON.Color3(0.0, 1.0, 0.0);
+            lampSphere.material.emissiveColor = new BABYLON.Color3(1, 1, 1);
+            //lampSphere.material.backFaceCulling = true;
+            //lampSphere.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+            lampSphere.position = lamplight.position;
+            
+            // Create the "God Rays" effect (volumetric light scattering)
+            var godrays = new BABYLON.VolumetricLightScatteringPostProcess('godrays', 1.0, camera, lampSphere, 100, BABYLON.Texture.BILINEAR_SAMPLINGMODE, engine, false);
+            godrays.exposure = 0.1;
+            godrays.decay = 0.96815;
+            godrays.weight = 0.91;
+            godrays.density = 1.24;
+            godrays.mesh.position = lamplight.position;
+
+//Objs
+
+			// Shadow
+            //var shadowGenerator = new BABYLON.ShadowGenerator(1024, ambient);
+
+            // Load scene mesh
+            var loader = new BABYLON.AssetsManager(scene);
+			var farmHouse = loader.addMeshTask("farmHouse", "", "/playground/scenes/farmHouse/", "farmhouse_obj.obj");
+			var farmhousetop1 = loader.addMeshTask("farmhousetop1", "", "/playground/scenes/farmHouse/", "farmhousetop.obj");
+			var farmhousetop2 = loader.addMeshTask("farmhousetop2", "", "/playground/scenes/farmHouse/", "farmhousetop2.obj");
+			var foundation = loader.addMeshTask("foundation", "", "/playground/scenes/", "foundation.obj");
+			var foundationsnow = loader.addMeshTask("foundationsnow", "", "/playground/scenes/", "foundationsnow.obj");
+			var island = loader.addMeshTask("island", "", "/playground/scenes/", "island.obj");
+			var islandsnow = loader.addMeshTask("islandsnow", "", "/playground/scenes/", "islandsnow.obj");
+			var railing = loader.addMeshTask("railing", "", "/playground/scenes/", "railing.obj");
+			var railingsnow = loader.addMeshTask("railingsnow", "", "/playground/scenes/", "railingsnow.obj");
+			var bare = loader.addMeshTask("bare", "", "/playground/scenes/Tree/", "bare.obj");
+			var baresnow = loader.addMeshTask("baresnow", "", "/playground/scenes/Tree/", "baresnow.obj");
+			//var birch = loader.addMeshTask("birch", "", "/playground/scenes/Tree/", "birch.obj");
+			var lamp = loader.addMeshTask("lamp", "", "/playground/scenes/", "lamp.obj");
+			var lampsnow = loader.addMeshTask("lampsnow", "", "/playground/scenes/", "lampsnow.obj");
+
+            var farmHouseMaterial = new BABYLON.StandardMaterial("farmHouseMaterial", scene);
+            farmHouseMaterial.diffuseTexture = new BABYLON.Texture("/playground/scenes/farmHouse/diffuse.jpg", scene);
+            farmHouseMaterial.bumpTexture = new BABYLON.Texture("/playground/scenes/farmHouse/normal.jpg", scene);
+            farmHouseMaterial.diffuseColor = new BABYLON.Color3(1, 1, 1);
+            //farmHouseMaterial.specularPower = 32;
+            //farmHouseMaterial.specularTexture = new BABYLON.Texture("/playground/scenes/farmHouse/specular.jpg", scene);
+            //farmHouseMaterial.emissiveColor = new BABYLON.Color3(0.2, 0.2, 0.2);
+
+            //farmHouseMaterial.useGlossinessFromSpecularMapAlpha = true;
+            //farmHouseMaterial.useParallax = true;
+            //farmHouseMaterial.useParallaxOcclusion = true;
+            //farmHouseMaterial.parallaxScaleBias = 0.02;
+
+            loader.onTaskSuccess = (task) => {
+				var m = task.loadedMeshes;
+				console.log(task.loadedMeshes.length);
+
+				switch(task.name){
+					case "farmHouse" :
+                        // farm house
+                        m[0].material = farmHouseSnowMaterial;
+						m[1].material = farmHouseSnowMaterial;
+						break;
+					case "farmhousetop1" :
+						m[0].material = housesnowMaterial;
+						break;
+					case "farmhousetop2" :
+						m[0].material = housesnowMaterial;
+						break;
+					case "islandsnow" :
+						m[0].material = snowMaterial;
+						m[0].position.y = -0.5
+						break;
+					case "island" :
+						m[0].material = islandsnowmaterial;
+						break;
+					case "bare" :
+						m[0].material = baresnowmaterial;
+						break;
+					case "baresnow" :
+						m[0].material = smallsnowMaterial;
+						break;
+					case "railing" :
+						m[0].material = baresnowmaterial;
+						break;
+					case "railingsnow" :
+						m[0].material = snowMaterial;
+						break;
+					case "foundation" :
+						m[0].material = baresnowmaterial;
+						break;
+					case "foundationsnow" :
+						m[0].material = snowMaterial;
+						break;
+					case "lamp" :
+						m[0].material = baresnowmaterial;
+						break;
+					case "lampsnow" :
+						m[0].material = smallsnowMaterial;
+						break;
+					default:
+                        break;
+				}
+                //var m = task.loadedMeshes;
+                //console.log('loaded meshed size is ', m.length);
+
+                /*for (var i = 0; i < m.length; i++) {
+        
+                    m[i].material = farmHouseSnowMaterial;
+                    //m[i].scaling = new BABYLON.Vector3(1.0, 1.0, 1.0);
+                    // to generate shadows
+                    //shadowGenerator.getShadowMap().renderList.push(m[i]);
+                }*/
+            };
+            BABYLON.OBJFileLoader.OPTIMIZE_WITH_UV = true;
+            loader.load();
+
+            //ShadowGenerator.usePoissonSampling = true;
+			//shadowGenerator.getShadowMap().refreshRate = 60; // considering lighting/thunder is dynamic light....
+			
+		
+			// --------------------- normal particle system ---------------------------------
+		
+			// Emitters
+			var emitter0 = BABYLON.Mesh.CreateBox("emitter0", 0.1, scene);
+			emitter0.isVisible = false;
+			emitter0.position.y = 25.0;
+		
+			// Particles
+			var particleSystem = new BABYLON.ParticleSystem("particles", 10000, scene);
+			particleSystem.particleTexture = new BABYLON.Texture("../../assets/snowflake.png", scene);
+			particleSystem.minAngularSpeed = 0;
+			particleSystem.maxAngularSpeed = Math.PI;
+			particleSystem.minSize = 0.1;
+			particleSystem.maxSize = 0.3;
+			particleSystem.minLifeTime = 10.0;
+			particleSystem.maxLifeTime = 10.0;
+			particleSystem.minEmitPower = 3.0;
+			particleSystem.maxEmitPower = 5.0;
+			particleSystem.updateSpeed = 0.03;
+			particleSystem.emitter = emitter0;
+			particleSystem.emitRate = 1200;
+			particleSystem.blendMode = BABYLON.ParticleSystem.BLENDMODE_ONEONE;
+			
+			particleSystem.minEmitBox = new BABYLON.Vector3(-50, 0, -50);
+			particleSystem.maxEmitBox = new BABYLON.Vector3(50, 0, 50);
+			particleSystem.direction1 = new BABYLON.Vector3(0, -1, 0);
+			particleSystem.direction2 = new BABYLON.Vector3(0, -1, 0);
+			particleSystem.color1 = new BABYLON.Color4(0.2, 0.2, 0.2, 0.6);
+			particleSystem.color2 = new BABYLON.Color4(0.2, 0.2, 0.2, 0.6);
+			particleSystem.colorDead = new BABYLON.Color4(0.2, 0.2, 0.2, 0.2);
+			particleSystem.gravity = new BABYLON.Vector3(0, 0, 0);
+		
+			particleSystem.start();
+			
+			// particle 2 
+			// var particleSystem2 = new BABYLON.ParticleSystem("particles2", 5000, scene, null, true);
+			// particleSystem2.particleTexture = new BABYLON.Texture("../../assets/rain_flare.bmp", scene, true, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
+			// particleSystem2.startSpriteCellID = 0;
+			// particleSystem2.endSpriteCellID = 3;
+			// particleSystem2.spriteCellHeight = 32;
+			// particleSystem2.spriteCellWidth = 32;
+			// particleSystem2.spriteCellLoop = true;
+			// particleSystem2.spriteCellChangeSpeed = 1; // default is zero
+			// particleSystem2.minEmitPower = 1.0;
+			// particleSystem2.maxEmitPower = 1.0;
+			// particleSystem2.emitRate = 2000;
+			// particleSystem2.updateSpeed = 0.01;
+			// particleSystem2.minLifeTime = 0.05;
+			// particleSystem2.maxLifeTime = 0.05;
+			// particleSystem2.minSize = 0.25;
+			// particleSystem2.maxSize = 0.25;
+			// particleSystem2.gravity = new BABYLON.Vector3(0, 0, 0);
+			// particleSystem2.direction1 = new BABYLON.Vector3(0, 0, 0);
+			// particleSystem2.direction2 = new BABYLON.Vector3(0, 0, 0);
+			// particleSystem2.minEmitBox = new BABYLON.Vector3(-50, 0, -50);
+			// particleSystem2.maxEmitBox = new BABYLON.Vector3(50, 0, 50);
+			// particleSystem2.color1 = new BABYLON.Color4(0.1, 0.1, 0.1, 0.3);
+			// particleSystem2.color2 = new BABYLON.Color4(0.1, 0.1, 0.1, 0.3);
+			// particleSystem2.colorDead = new BABYLON.Color4(0.1, 0.1, 0.1, 0.3);
+
+
+			//particleSystem2.start();
+
+			// Rain Ambient Sound
+			//var rainMusic = new BABYLON.Sound("Music", "../../assets/rain_nature2.wav", scene, null, { loop: true, autoplay: true });
+			//rainMusic.setVolume(0.5);
+
+			//Register a render loop to repeatedly render the scene
+			engine.runRenderLoop(function () {
+				scene.render();
+				divFps.innerHTML = engine.getFps().toFixed() + " fps";
+			});
+
+			// Resize
+			window.addEventListener("resize", function () {
+				engine.resize();
+			});
+
+//PostProcess
+
+			//var aaPostProcess = new BABYLON.AsciiArtPostProcess("AsciiArt", camera);
+			//var drPostProcess = new BABYLON.DigitalRainPostProcess("AsciiArt", camera);
+
+			//var ssao = new BABYLON.SSAORenderingPipeline('ssaopipeline', scene, 0.75, camera);
+			//var postProcess = new BABYLON.FxaaPostProcess("fxaa", 2.0, camera);
+
+			scene.fogMode = BABYLON.Scene.FOGMODE_EXP;
+			scene.fogDensity = 0.004;
+			scene.fogColor = new BABYLON.Color3(0.9, 0.9, 0.85);
+
+			//var abPostProcess = new BABYLON.rainPostProcess("rain",1.0, camera);
+			var aaPostProcess = new BABYLON.frostPostProcess("frost","frost3.jpg", 1.0, camera);
+
+			// var defaultPipeline = new BABYLON.DefaultRenderingPipeline("default", true, scene, [camera]);
+			// //defaultPipeline.bloomEnabled = false;
+			// defaultPipeline.fxaaEnabled = true;
+			// defaultPipeline.imageProcessing.toneMappingEnabled = true;
+			
+			// var lensEffect = new BABYLON.LensRenderingPipeline('lens', {
+			// edge_blur: 1.0,
+			// chromatic_aberration: 1.0,
+			// distortion: 0.0,
+			// dof_focus_distance: 100.0,
+			// dof_aperture: 6.0,			// set this very high for tilt-shift effect
+			// grain_amount: 1.0,
+			// dof_pentagon: true,
+			// dof_gain: 1.0,
+			// dof_threshold: 1.0,
+			// dof_darken: 0.25
+			// }, scene, 1.0, camera);
+
+			//lensEffect.grain_texture = new BABYLON.Texture("src/ground.jpg", scene);
+
+
+			//camera.detachPostProcess(aaPostProcess);
+			//camera.detachPostProcess(drPostProcess);
+
+			// // bloom
+            // var blurWidth = 10.0;
+            // var postProcess0 = new BABYLON.PassPostProcess("Scene copy", 1.0, camera);
+            // var postProcess1 = new BABYLON.PostProcess("Down sample", "../assets/postprocesses/downsample", ["screenSize", "highlightThreshold"], null, 0.25, camera, BABYLON.Texture.BILINEAR_SAMPLINGMODE);
+            // postProcess1.onApply = function (effect) {
+            //  effect.setFloat2("screenSize", postProcess1.width, postProcess1.height);
+            //  effect.setFloat("highlightThreshold", 0.95);
+            // };
+            // var postProcess2 = new BABYLON.BlurPostProcess("Horizontal blur", new BABYLON.Vector2(1.0, 0), blurWidth, 0.25, camera);
+            // var postProcess3 = new BABYLON.BlurPostProcess("Vertical blur", new BABYLON.Vector2(0, 1.0), blurWidth, 0.25, camera);
+            // var postProcess4 = new BABYLON.PostProcess("Final compose", "../assets/postprocesses/compose", ["sceneIntensity", "glowIntensity", "highlightIntensity"], ["sceneSampler"], 1, camera);
+            // postProcess4.onApply = function (effect) {
+            //  effect.setTextureFromPostProcess("sceneSampler", postProcess0);
+            //  effect.setFloat("sceneIntensity", 0.5);
+            //  effect.setFloat("glowIntensity", 0.4);
+            //  effect.setFloat("highlightIntensity", 1.0);
+			// };
+
+			// var pipeline = new BABYLON.StandardRenderingPipeline("standard", scene, 1.0, null, [camera]);
+    		// //pipeline.lensTexture = new BABYLON.Texture("/playground/textures/lensdirt.jpg", scene);
+			// // Enable motion blur in the pipeline
+			// pipeline.brightThreshold = 0.8;
+			// pipeline.exposure = 0.0;
+			// pipeline.MotionBlurEnabled = true;
+
+			// // Default value is 1.0. More the motion strength is high, more the blur will be high
+			// pipeline.motionStrength = 0.5;
+
+			// // Default value is 64.0. This property represents the quality of the effect. More the value is high
+			// // more the blur will be high quality. 64.0 is enough to have a beautiful result
+			// pipeline.motionBlurSamples = 32.0;
+//GUI
+
+			var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+			advancedTexture.idealHeight = 1100;
+
+			var panel = new BABYLON.GUI.StackPanel();
+			panel.width = "300px";
+			panel.isVertical = true;
+			panel.paddingRight = "20px";
+			panel.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+			panel.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+			panel.fontSize = 16;
+			advancedTexture.addControl(panel);
+
+			var getMaterialProperty = function(material, property) {
+				return material[property];
+			}
+
+			var setMaterialPropertyPath = function(material, property, value) {
+				material[property] = value;
+				smallsnowMaterial[property] = value;
+				return;
+			}    
+
+			var addMaterialSlider = function(material, text, property, min, max, left, panel, top) {
+				var topPanel = new BABYLON.GUI.StackPanel();        
+				topPanel.height = "30px";
+				topPanel.isVertical = false;
+				panel.addControl(topPanel);    
+
+				var header = new BABYLON.GUI.TextBlock();
+				header.text = text;
+				header.width = "150px";
+				header.color = "white";
+				header.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+				topPanel.addControl(header); 
+				if (left) {
+					header.left = left;
+				}
+
+				var valueHeader = new BABYLON.GUI.TextBlock();
+				valueHeader.text = getMaterialProperty(material, property).toFixed(2);
+				valueHeader.width = "100px";
+				valueHeader.color = "white";
+				valueHeader.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+				topPanel.addControl(valueHeader);            
+
+				var slider = new BABYLON.GUI.Slider();
+				slider.minimum = min;
+				slider.maximum = max;
+				slider.height = "20px";
+				slider.color = "green";
+				slider.background = "white";
+				slider.onSync = function() {
+					slider.value = getMaterialProperty(material, property);
+				}
+				slider.onSync();
+				slider.onValueChangedObservable.add(function(value) {
+					valueHeader.text = value.toFixed(2);
+					setMaterialPropertyPath(material, property, value);
+				});
+
+				if (left) {
+					slider.paddingLeft = left;
+				}
+
+			panel.addControl(slider);  
+
+			return slider;
+			}
+
+			var snowWeatherAmount;
+
+			var addSnowWeatherSlider = function(text, property, min, max, left, panel, top) {
+				var topPanel = new BABYLON.GUI.StackPanel();        
+				topPanel.height = "30px";
+				topPanel.isVertical = false;
+				panel.addControl(topPanel);    
+
+				var header = new BABYLON.GUI.TextBlock();
+				header.text = text;
+				header.width = "150px";
+				header.color = "white";
+				header.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+				topPanel.addControl(header); 
+				if (left) {
+					header.left = left;
+				}
+
+				var valueHeader = new BABYLON.GUI.TextBlock();
+				valueHeader.text = getMaterialProperty(material, property).toFixed(2);
+				valueHeader.width = "100px";
+				valueHeader.color = "white";
+				valueHeader.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+				topPanel.addControl(valueHeader);            
+
+				var slider = new BABYLON.GUI.Slider();
+				slider.minimum = min;
+				slider.maximum = max;
+				slider.height = "20px";
+				slider.color = "green";
+				slider.background = "white";
+				slider.onSync = function() {
+					slider.value = getMaterialProperty(material, property);
+				}
+				slider.onSync();
+				slider.onValueChangedObservable.add(function(value) {
+					valueHeader.text = value.toFixed(2);
+					setMaterialPropertyPath(material, property, value);
+				});
+
+				if (left) {
+					slider.paddingLeft = left;
+				}
+
+			panel.addControl(slider);  
+
+			return slider;
+			}
+
+			var addButton = function(text, func, left, panel) {
+				var button = BABYLON.GUI.Button.CreateSimpleButton("button", text);
+				button.height = "30px";
+				button.width = "200px";
+				button.color = "white";
+				button.background = "green";
+				button.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+				button.onPointerDownObservable.add(function(){
+					func();
+				})
+				panel.addControl(button); 
+
+				if (left) {
+					button.left = left;
+				}
+			} 
+
+			var addSeparator = function(panel) {
+				var rectangle = new BABYLON.GUI.Rectangle();
+				rectangle.height = "15px";
+				rectangle.thickness = 0;
+				panel.addControl(rectangle); 
+			}
+
+			// addMaterialSlider(snowMaterial, "Snow tileSize :", "tileSize", 0, 20, "20px", panel);   
+			// addSeparator(panel);
+			
+			// addMaterialSlider(snowMaterial, "Snow noiseSize :", "noiseSize", 0, 100, "20px", panel);   
+			// addSeparator(panel);
+			
+			// addMaterialSlider(snowMaterial, "Snow lastTime :", "lastTime", -20000, 100000, "20px", panel);   
+			// addSeparator(panel);
+			
+			// addMaterialSlider(skyMaterial, "Cloud timeScale :", "timeScale", 0, 10, "20px", panel);   
+			// addSeparator(panel);
+
+			// addMaterialSlider(skyMaterial, "Cloud cloudScale :", "cloudScale", 0, 1, "20px", panel);   
+			// addSeparator(panel);
+
+			// addMaterialSlider(skyMaterial, "Cloud cover :", "cover", 0, 1, "20px", panel);   
+			// addSeparator(panel);
+
+			// addMaterialSlider(skyMaterial, "Cloud softness :", "softness", 0, 1, "20px", panel);   
+			// addSeparator(panel);
+
+			// addMaterialSlider(skyMaterial, "Cloud brightness :", "brightness", 0, 1, "20px", panel);   
+			// addSeparator(panel);
+
+			// addMaterialSlider(skyMaterial, "Cloud noiseOctaves :", "noiseOctaves", 0, 8, "20px", panel);   
+			// addSeparator(panel);
+
+			// addMaterialSlider(skyMaterial, "Cloud curlStrain :", "curlStrain", 0, 10, "20px", panel);   
+			// addSeparator(panel);
+
+			// addMaterialSlider(skyMaterial, "Sky time :", "skyTime", 0, 6.28, "20px", panel);   
+			// addSeparator(panel);
+
+			/*addMaterialSlider(skyMaterial, "Sky turbidity :", "turbidity", 0, 20, "20px", panel);   
+			addSeparator(panel);
+
+			addMaterialSlider(skyMaterial, "Sky rayleigh :", "rayleigh", 0, 2, "20px", panel);   
+			addSeparator(panel);
+
+			addMaterialSlider(skyMaterial, "Sky mieCoefficient :", "mieCoefficient", 0, 0.01, "20px", panel);   
+			addSeparator(panel);
+
+			addMaterialSlider(skyMaterial, "Sky mieDirectionalG :", "mieDirectionalG", 0, 2, "20px", panel);   
+			addSeparator(panel);
+
+			addMaterialSlider(skyMaterial, "Sky distance :", "distance", 0, 1000, "20px", panel);   
+			addSeparator(panel);
+
+			addMaterialSlider(skyMaterial, "Sky inclination :", "inclination", 0, 1, "20px", panel);   
+			addSeparator(panel);
+
+			addMaterialSlider(skyMaterial, "Sky azimuth :", "azimuth", 0, 1, "20px", panel);   
+			addSeparator(panel);*/
+
+    		//addMaterialSlider(skyMaterial, "Sky luminance :", "luminance", 0, 1.0, "20px", panel);   
+			//addSeparator(panel);
+			/*registerRangeUI("snow", "tileSize", 0, 20, function(value) {
+				snow.tileSize = value;
+			}, function() {
+				return snow.tileSize;
+			});*/
+			
+		}
+	});
+
+	</script>
+</body>
+
+</html>
